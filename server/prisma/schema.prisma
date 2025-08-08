@@ -1,0 +1,215 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model notifikasi {
+  id          String          @id
+  userId      String
+  transaksiId String?
+  tipe        notifikasi_tipe
+  judul       String
+  pesan       String
+  dibaca      Boolean         @default(false)
+  dibuatPada  DateTime        @default(now())
+  transaksi   transaksi?      @relation(fields: [transaksiId], references: [id], map: "Notifikasi_transaksiId_fkey")
+  user        user            @relation(fields: [userId], references: [id], map: "Notifikasi_userId_fkey")
+
+  @@index([transaksiId], map: "Notifikasi_transaksiId_fkey")
+  @@index([userId], map: "Notifikasi_userId_fkey")
+}
+
+model produk {
+  id             String               @id
+  kodeProduk     String               @unique(map: "Produk_kodeProduk_key")
+  namaGame       String
+  deskripsi      String?              @db.Text
+  harga          Int
+  penjualId      String
+  statusJual     Boolean              @default(true)
+  gambar         String?              @db.LongText
+  judulProduk    String
+  dibuatPada     DateTime             @default(now())
+  diperbaruiPada DateTime             @updatedAt
+  statusProduk   produk_statusProduk? @default(AKTIF)
+  hargaEth       Float?
+  user           user                 @relation(fields: [penjualId], references: [id], map: "Produk_penjualId_fkey")
+  transaksi      transaksi[]
+
+  @@index([penjualId], map: "Produk_penjualId_fkey")
+  @@index([statusProduk], map: "idx_produk_status")
+  @@index([statusJual, statusProduk], map: "idx_produk_status_jual")
+}
+
+model profile {
+  id             String  @id
+  userId         String  @unique(map: "Profile_userId_key")
+  nama           String
+  nomor_telepon  String? @unique(map: "Profile_nomor_telepon_key")
+  alamat         String?
+  nomor_whatsapp String?
+  user           user    @relation(fields: [userId], references: [id], map: "Profile_userId_fkey")
+}
+
+model riwayattransaksi {
+  id             String   @id
+  kodeTransaksi  String
+  namaGame       String
+  harga          Int
+  walletPenjual  String
+  walletPembeli  String
+  tanggalSelesai DateTime
+  dibuatPada     DateTime @default(now())
+}
+
+model sengketa {
+  id            String               @id
+  transaksiId   String               @unique(map: "Sengketa_transaksiId_key")
+  deskripsi     String?
+  adminNote     String?              @db.Text
+  dibuatPada    DateTime             @default(now())
+  disputeType   sengketa_disputeType @default(USER_DISPUTE)
+  paymentMethod String?
+  paymentTxHash String?
+  pembeliBukti  String? @db.Text
+  penjualBukti  String? @db.Text
+  resolution    String?              @db.Text
+  resolvedAt    DateTime?
+  status        sengketa_status      @default(DIPROSES)
+  transaksi     transaksi            @relation(fields: [transaksiId], references: [id], map: "Sengketa_transaksiId_fkey")
+
+  @@index([disputeType], map: "idx_sengketa_disputeType")
+}
+
+model transaksi {
+  id                             String           @id
+  kodeTransaksi                  String           @unique(map: "Transaksi_kodeTransaksi_key")
+  produkId                       String
+  pembeliId                      String
+  penjualId                      String
+  status                         transaksi_status @default(MENUNGGU_PEMBAYARAN)
+  waktuBayar                     DateTime?
+  waktuSelesai                   DateTime?
+  contractAddress                String?
+  escrowAmount                   String?
+  smartContractTxHash            String?
+  accountData                    String?          @db.Text
+  deskripsiBukti                 String?          @db.Text
+  adminRefundAt                  DateTime?
+  adminRefundBy                  String?
+  adminRefundNote                String?          @db.Text
+  adminRefundTxHash              String?
+  adminReleaseAt                 DateTime?
+  adminReleaseBy                 String?
+  adminReleaseNote               String?          @db.Text
+  adminReleaseTxHash             String?
+  dibuatPada                     DateTime         @default(now())
+  diperbaruiPada                 DateTime         @updatedAt
+  escrowId                       String?
+  expiredAt                      DateTime?
+  notifikasi                     notifikasi[]
+  sengketa                       sengketa?
+  user_transaksi_pembeliIdTouser user             @relation("transaksi_pembeliIdTouser", fields: [pembeliId], references: [id], map: "Transaksi_pembeliId_fkey")
+  user_transaksi_penjualIdTouser user             @relation("transaksi_penjualIdTouser", fields: [penjualId], references: [id], map: "Transaksi_penjualId_fkey")
+  produk                         produk           @relation(fields: [produkId], references: [id], map: "Transaksi_produkId_fkey")
+
+  @@index([pembeliId], map: "Transaksi_pembeliId_fkey")
+  @@index([penjualId], map: "Transaksi_penjualId_fkey")
+  @@index([produkId], map: "Transaksi_produkId_fkey")
+  @@index([escrowId], map: "Transaksi_escrowId_fkey")
+  @@index([escrowId], map: "idx_escrowId")
+}
+
+model user {
+  id                                  String            @id
+  email                               String            @unique(map: "User_email_key")
+  password                            String
+  role                                user_role         @default(PEMBELI)
+  walletAddress                       String?           @unique(map: "User_walletAddress_key")
+  dibuatPada                          DateTime          @default(now())
+  aplikasiPenjual                     aplikasi_penjual?
+  notifikasi                          notifikasi[]
+  produk                              produk[]
+  profile                             profile?
+  transaksi_transaksi_pembeliIdTouser transaksi[]       @relation("transaksi_pembeliIdTouser")
+  transaksi_transaksi_penjualIdTouser transaksi[]       @relation("transaksi_penjualIdTouser")
+}
+
+model aplikasi_penjual {
+  id             String          @id
+  userId         String          @unique
+  nomor_telepon  String?
+  nomor_whatsapp String?
+  alamat         String?         @db.Text
+  alasan_jual    String?         @db.Text
+  status         status_aplikasi @default(MENUNGGU)
+  catatan_admin  String?         @db.Text
+  diajukan_pada  DateTime?
+  diperbarui     DateTime?
+  user           user            @relation(fields: [userId], references: [id])
+
+  @@index([status])
+  @@index([diajukan_pada], map: "aplikasi_penjual_diajukanPada_idx")
+}
+
+enum status_aplikasi {
+  MENUNGGU
+  SEDANG_DIREVIEW
+  DISETUJUI
+  DITOLAK
+}
+
+enum user_role {
+  PEMBELI   // Pengguna yang membeli akun game (sebelumnya USER)
+  PENJUAL   // Pengguna yang menjual akun game
+  ADMIN     // Administrator sistem
+}
+
+enum notifikasi_tipe {
+  REGISTER
+  PEMBAYARAN_DITERIMA
+  TRANSAKSI_SUKSES
+  SENGKETA_DIMULAI
+  SENGKETA_DIPUTUSKAN
+  AKUN_DIKIRIM
+  COUNTDOWN_PEMBAYARAN
+  APLIKASI_PENJUAL_DIAJUKAN
+  APLIKASI_PENJUAL_DISETUJUI
+  APLIKASI_PENJUAL_DITOLAK
+  APLIKASI_PENJUAL_BARU
+}
+
+enum transaksi_status {
+  MENUNGGU_PEMBAYARAN
+  DIBAYAR_SMARTCONTRACT
+  MENUNGGU_KIRIM_AKUN
+  DIKIRIM
+  DIKONFIRMASI_PEMBELI
+  SENGKETA
+  SELESAI
+  REFUND
+  GAGAL
+}
+
+enum sengketa_status {
+  DIPROSES
+  DIMENANGKAN_PEMBELI
+  DIMENANGKAN_PENJUAL
+}
+
+enum sengketa_disputeType {
+  USER_DISPUTE
+  ADMIN_DISPUTE
+}
+
+enum produk_statusProduk {
+  AKTIF
+  TERJUAL
+  PENDING
+  DITOLAK
+  DIHAPUS
+}

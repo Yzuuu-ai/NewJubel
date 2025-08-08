@@ -1,0 +1,17 @@
+{
+  "contractName": "EscrowFixed",
+  "contractAddress": "0x2100b2dEF2B3d7Dc4B29f8D297C9AA283b74b1f6",
+  "deployer": "0xE14fcb0fDb1256445DC6ddd876225a8fAd9D211F",
+  "deployerBalance": "0.353067571937825629",
+  "network": "sepolia",
+  "chainId": 11155111,
+  "deploymentTime": "2025-06-22T11:10:29.959Z",
+  "blockNumber": 8603990,
+  "features": {
+    "adminReleaseFunds": true,
+    "adminRefund": true,
+    "batchProcessing": true,
+    "adminTracking": true,
+    "disputeResolution": true
+  }
+}

@@ -1,0 +1,199 @@
+import React, { useState, useRef } from 'react';
+import { PhotoIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { apiService } from '../layanan/api';
+import { getAllProductImageUrls } from '../utils/imageHelper';
+import toast from 'react-hot-toast';
+
+const ImageUploadFixed = ({ 
+  onUploadSuccess, 
+  onUploadError, 
+  maxFiles = 1, 
+  currentImages = [],
+  className = '' 
+}) => {
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef(null);
+
+  // Parse currentImages to handle JSON string arrays
+  const parseCurrentImages = (images) => {
+    if (Array.isArray(images)) {
+      return images;
+    } else if (typeof images === 'string' && images.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(images);
+        return Array.isArray(parsed) ? parsed : [images];
+      } catch (error) {
+        return [images];
+      }
+    } else if (images) {
+      return [images];
+    }
+    return [];
+  };
+
+  const imagesToShow = parseCurrentImages(currentImages);
+
+  const handleFileSelect = async (files) => {
+    if (files.length === 0) return;
+
+    // Validasi jumlah file
+    if (files.length > maxFiles) {
+      toast.error(`Maksimal ${maxFiles} file yang dapat diupload`);
+      return;
+    }
+
+    // Validasi ukuran file (5MB)
+    const maxSize = 5 * 1024 * 1024;
+    for (let file of files) {
+      if (file.size > maxSize) {
+        toast.error(`File ${file.name} terlalu besar. Maksimal 5MB`);
+        return;
+      }
+    }
+
+    // Validasi tipe file
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    for (let file of files) {
+      if (!allowedTypes.includes(file.type)) {
+        toast.error(`File ${file.name} bukan format gambar yang didukung`);
+        return;
+      }
+    }
+
+    try {
+      setUploading(true);
+      
+      if (maxFiles === 1) {
+        // Single file upload
+        const response = await apiService.upload.uploadImage(files[0]);
+        if (response.data.sukses) {
+          const newImages = [...imagesToShow, response.data.data.url];
+          const limitedImages = newImages.slice(0, maxFiles);
+          onUploadSuccess && onUploadSuccess(limitedImages);
+          toast.success('Gambar berhasil diupload!');
+        } else {
+          throw new Error(response.data.pesan || 'Upload gagal');
+        }
+      } else {
+        // Multiple file upload
+        if (apiService.upload.uploadMultipleImages) {
+          const response = await apiService.upload.uploadMultipleImages(files);
+          if (response.data.sukses) {
+            const urls = response.data.data.urls || response.data.data.files?.map(f => f.url) || [];
+            const allImages = [...imagesToShow, ...urls];
+            const limitedImages = allImages.slice(0, maxFiles);
+            onUploadSuccess && onUploadSuccess(limitedImages);
+            toast.success(`${files.length} gambar berhasil diupload!`);
+          } else {
+            throw new Error(response.data.pesan || 'Upload gagal');
+          }
+        } else {
+          // Fallback: upload one by one
+          const uploadPromises = files.map(file => apiService.upload.uploadImage(file));
+          const responses = await Promise.all(uploadPromises);
+          const urls = responses.map(r => r.data.data.url);
+          const allImages = [...imagesToShow, ...urls];
+          const limitedImages = allImages.slice(0, maxFiles);
+          onUploadSuccess && onUploadSuccess(limitedImages);
+          toast.success(`${files.length} gambar berhasil diupload!`);
+        }
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      const errorMessage = error.response?.data?.pesan || 
+                          error.response?.data?.message || 
+                          error.message || 
+                          'Gagal upload gambar';
+      toast.error(errorMessage);
+      onUploadError && onUploadError(error);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleFileInputChange = (e) => {
+    const files = Array.from(e.target.files);
+    handleFileSelect(files);
+    e.target.value = '';
+  };
+
+  const removeImage = (imageUrl) => {
+    const updatedImages = imagesToShow.filter(img => img !== imageUrl);
+    onUploadSuccess && onUploadSuccess(updatedImages);
+  };
+
+  return (
+    <div className={className}>
+      {/* Current Images */}
+      {imagesToShow.length > 0 && (
+        <div className="mb-4">
+          <p className="text-sm font-medium text-gray-700 mb-2">Gambar Saat Ini:</p>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {imagesToShow.map((imageUrl, index) => (
+              <div key={index} className="relative group">
+                <img
+                  src={imageUrl}
+                  alt={`Preview ${index + 1}`}
+                  className="w-full h-24 object-cover rounded-md border"
+                  onError={(e) => {
+                    // Handle broken images or invalid data URLs
+                    console.warn('Image failed to load:', imageUrl);
+                    e.target.src = '/placeholder-game.jpg';
+                  }}
+                />
+                <button
+                  onClick={() => removeImage(imageUrl)}
+                  className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <XMarkIcon className="h-3 w-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Upload Area */}
+      <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          multiple={maxFiles > 1}
+          onChange={handleFileInputChange}
+          className="hidden"
+        />
+        {uploading ? (
+          <div className="flex flex-col items-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mb-2"></div>
+            <p className="text-sm text-gray-600">Memproses gambar...</p>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center">
+            <PhotoIcon className="h-12 w-12 text-gray-400 mb-3" />
+            <p className="text-sm font-medium text-gray-900 mb-1">
+              Klik untuk pilih gambar
+            </p>
+            <p className="text-xs text-gray-500 mb-3">
+              PNG, JPG, GIF, WebP hingga 5MB
+              {maxFiles > 1 && ` (Maksimal ${maxFiles} file)`}
+            </p>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="bg-primary-600 text-white px-4 py-2 rounded-md hover:bg-primary-700 transition-colors text-sm"
+            >
+              Pilih Gambar
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Info */}
+      <div className="mt-3 text-xs text-gray-500">
+        <p>💡 Tips: Gunakan screenshot yang jelas untuk menunjukkan detail akun game Anda</p>
+      </div>
+    </div>
+  );
+};
+
+export default ImageUploadFixed;

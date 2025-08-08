@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#000000" />
+    <meta
+      name="description"
+      content="Jubel - Platform Jual Beli"
+    />
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
+    <!--
+      manifest.json provides metadata used when your web app is installed on a
+      user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
+    -->
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    <!--
+      Notice the use of %PUBLIC_URL% in the tags above.
+      It will be replaced with the URL of the `public` folder during the build.
+      Only files inside the `public` folder can be referenced from the HTML.
+
+      Unlike "/favicon.ico" or "favicon.ico", "%PUBLIC_URL%/favicon.ico" will
+      work correctly both with client-side routing and a non-root public URL.
+      Learn how to configure a non-root public URL by running `npm run build`.
+    -->
+    <title>Jubel</title>
+    
+    <!-- Early wallet extension error suppression -->
+    <script>
+      // IMMEDIATE PROTECTION: Prevent ethereum property redefinition errors
+      (function() {
+        // Store original methods before any extensions load
+        const originalDefineProperty = Object.defineProperty;
+        const originalConsoleError = console.error;
+        
+        // Override Object.defineProperty to handle ethereum property gracefully
+        Object.defineProperty = function(obj, prop, descriptor) {
+          try {
+            if (prop === 'ethereum' && obj === window) {
+              // If ethereum already exists, return it instead of throwing error
+              if (window.ethereum) {
+                return window.ethereum;
+              }
+            }
+            return originalDefineProperty.call(this, obj, prop, descriptor);
+          } catch (error) {
+            if (error.message && error.message.includes('Cannot redefine property: ethereum')) {
+              // Silently return existing ethereum object
+              return window.ethereum || obj[prop];
+            }
+            throw error;
+          }
+        };
+        
+        // Override console.error to suppress ethereum redefinition errors
+        console.error = function(...args) {
+          const message = args.join(' ');
+          if (message.includes('Cannot redefine property: ethereum') ||
+              message.includes('evmAsk.js') ||
+              message.includes('bfnaelmomeimhlpmgjnjophhpkkoljpa')) {
+            return; // Suppress these errors
+          }
+          return originalConsoleError.apply(this, args);
+        };
+        
+        // Global error handler
+        window.onerror = function(message, source, lineno, colno, error) {
+          if (message && (
+            message.includes('Cannot redefine property: ethereum') ||
+            message.includes('evmAsk.js') ||
+            message.includes('chrome-extension')
+          )) {
+            return true; // Prevent default error handling
+          }
+          return false;
+        };
+        
+        // Suppress error events
+        window.addEventListener('error', function(event) {
+          if (event.message && (
+            event.message.includes('Cannot redefine property: ethereum') ||
+            event.message.includes('evmAsk.js') ||
+            event.filename?.includes('chrome-extension')
+          )) {
+            event.preventDefault();
+            event.stopPropagation();
+            return false;
+          }
+        });
+        
+      })();
+    </script>
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+    <!--
+      This HTML file is a template.
+      If you open it directly in the browser, you will see an empty page.
+
+      You can add webfonts, meta tags, or analytics to this file.
+      The build step will place the bundled scripts into the <body> tag.
+
+      To begin the development, run `npm start` or `yarn start`.
+      To create a production bundle, use `npm run build` or `yarn build`.
+    -->
+  </body>
+</html>

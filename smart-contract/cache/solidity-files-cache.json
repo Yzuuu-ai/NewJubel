@@ -1,0 +1,75 @@
+{
+  "_format": "hh-sol-cache-2",
+  "files": {
+    "D:\\skripsi\\Jubel\\smart-contract\\contracts\\EspadaMarketplace.sol": {
+      "lastModificationDate": 1750588240844,
+      "contentHash": "6c910c92bc6f3609003e142c6ce84b78",
+      "sourceName": "contracts/EspadaMarketplace.sol",
+      "solcConfig": {
+        "version": "0.8.19",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.19"
+      ],
+      "artifacts": [
+        "EspadaMarketplace"
+      ]
+    },
+    "D:\\skripsi\\Jubel\\smart-contract\\contracts\\Escrow.sol": {
+      "lastModificationDate": 1750589008887,
+      "contentHash": "1069659ab70c2a789ee349a2fd0f2047",
+      "sourceName": "contracts/Escrow.sol",
+      "solcConfig": {
+        "version": "0.8.19",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.19"
+      ],
+      "artifacts": [
+        "EscrowFixed"
+      ]
+    }
+  }
+}
