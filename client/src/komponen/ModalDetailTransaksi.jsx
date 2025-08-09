@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../konteks/AuthContext';
 import { RoleBasedTransaksiActions } from './KomponenSengketaBerdasarkanRole';
 import EvidenceImageGallery from './EvidenceImageGallery';
+import { getProductImageUrl, createImageErrorHandler } from '../utils/imageHelper';
 import {
   XMarkIcon,
   ClockIcon,
@@ -345,9 +346,10 @@ const ModalDetailTransaksi = ({ isOpen, onClose, transaksi, onRefresh }) => {
                     
                     <div className="flex items-start space-x-4 mb-4">
                       <img
-                        src={transaksi?.produk?.gambar || '/placeholder-game.jpg'}
+                        src={getProductImageUrl(transaksi?.produk?.gambar) || '/placeholder-game.svg'}
                         alt={transaksi?.produk?.judulProduk || 'Produk'}
                         className="w-20 h-20 rounded-lg object-cover border border-gray-200"
+                        onError={createImageErrorHandler()}
                       />
                       <div className="flex-1">
                         <h4 className="font-medium text-gray-900 text-lg">{transaksi?.produk?.judulProduk || 'Produk Tidak Ditemukan'}</h4>

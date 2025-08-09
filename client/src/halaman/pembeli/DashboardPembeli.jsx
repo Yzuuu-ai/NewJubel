@@ -9,7 +9,6 @@ import ModalLihatAkun from '../../komponen/ModalLihatAkun';
 import ModalTerimaAkun from '../../komponen/ModalTerimaAkun';
 import ModalSengketa from '../../komponen/ModalSengketa';
 import ModalDetailTransaksi from '../../komponen/ModalDetailTransaksi';
-import PaymentTimer from '../../komponen/PaymentTimer';
 import PembelianKontrakPintar from '../../komponen/PembelianKontrakPintar';
 import transactionExpiryManager from '../../utils/transactionExpiry';
 import toast from 'react-hot-toast';
@@ -22,8 +21,79 @@ import {
   ArrowPathIcon,
   BanknotesIcon,
   DocumentTextIcon,
-  ShieldCheckIcon
+  ShieldCheckIcon,
+  CurrencyDollarIcon
 } from '@heroicons/react/24/outline';
+
+// Simple Timer Component
+const SimpleTimer = ({ transaksi, onExpired }) => {
+  const [timeLeft, setTimeLeft] = useState(null);
+  const [isExpired, setIsExpired] = useState(false);
+
+  useEffect(() => {
+    if (!transaksi || transaksi.status !== 'MENUNGGU_PEMBAYARAN') {
+      return;
+    }
+
+    const createdAt = new Date(transaksi.dibuatPada);
+    const expiryTime = new Date(createdAt.getTime() + 15 * 60 * 1000); // 15 menit
+
+    const updateTimer = () => {
+      const now = new Date();
+      const difference = expiryTime.getTime() - now.getTime();
+
+      if (difference <= 0) {
+        setTimeLeft({ minutes: 0, seconds: 0 });
+        setIsExpired(true);
+        if (onExpired) {
+          onExpired(transaksi);
+        }
+        return;
+      }
+
+      const minutes = Math.floor(difference / (1000 * 60));
+      const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+      setTimeLeft({ minutes, seconds });
+      setIsExpired(false);
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    return () => clearInterval(interval);
+  }, [transaksi, onExpired]);
+
+  if (!transaksi || transaksi.status !== 'MENUNGGU_PEMBAYARAN') {
+    return null;
+  }
+
+  if (isExpired) {
+    return (
+      <p className="text-xs text-red-600 font-medium">
+        Waktu habis
+      </p>
+    );
+  }
+
+  if (timeLeft) {
+    return (
+      <p className={`text-xs font-medium ${
+        timeLeft.minutes < 5
+          ? 'text-red-600'
+          : timeLeft.minutes < 10
+            ? 'text-orange-600'
+            : 'text-blue-600'
+      }`}>
+        {String(timeLeft.minutes).padStart(2, '0')}:{String(timeLeft.seconds).padStart(2, '0')}
+      </p>
+    );
+  }
+
+  return (
+    <p className="text-xs text-blue-600 font-medium">
+      Memuat...
+    </p>
+  );
+};
 
 const DashboardPembeli = () => {
   const [transaksi, setTransaksi] = useState([]);
@@ -39,6 +109,7 @@ const DashboardPembeli = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedTransaksi, setSelectedTransaksi] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [paymentTimers, setPaymentTimers] = useState({});
   
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   const { isConnected, walletAddress } = useWallet();
@@ -626,18 +697,16 @@ const DashboardPembeli = () => {
                               Escrow ID: {item.escrowId}
                             </p>
                           )}
+                          {/* Simple Timer Display - Hanya untuk MENUNGGU_PEMBAYARAN */}
+                          {item.status === 'MENUNGGU_PEMBAYARAN' && (
+                            <SimpleTimer
+                              transaksi={item}
+                              onExpired={handlePaymentExpired}
+                            />
+                          )}
                         </div>
                       </div>
 
-                      {/* Payment Timer - Hanya untuk MENUNGGU_PEMBAYARAN */}
-                      {item.status === 'MENUNGGU_PEMBAYARAN' && (
-                        <PaymentTimer
-                          transaksi={item}
-                          onExpired={handlePaymentExpired}
-                          onPayment={handlePayment}
-                        />
-                      )}
-                      
                       {/* Action Buttons */}
                       <div className="flex flex-wrap gap-2">
                         {/* Tombol Lihat Akun */}

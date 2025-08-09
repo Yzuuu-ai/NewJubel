@@ -5,6 +5,7 @@ import { useWallet } from '../../konteks/WalletContext';
 import { transaksiAPI, produkAPI } from '../../layanan/api';
 import { useDashboardUpdates } from '../../hooks/useRealTimeUpdates';
 import { accountDataHelper } from '../../utils/accountDataHelper';
+import { getProductImageUrl, createImageErrorHandler } from '../../utils/imageHelper';
 import ModalLihatAkun from '../../komponen/ModalLihatAkun';
 import ModalTerimaAkun from '../../komponen/ModalTerimaAkun';
 import ModalKirimAkun from '../../komponen/ModalKirimAkun';
@@ -12,7 +13,6 @@ import ModalSengketa from '../../komponen/ModalSengketa';
 import ModalSengketaPenjual from '../../komponen/ModalSengketaPenjual';
 import ModalDetailSengketa from '../../komponen/ModalDetailSengketa';
 import ModalDetailTransaksi from '../../komponen/ModalDetailTransaksi';
-import PaymentTimer from '../../komponen/PaymentTimer';
 import PembelianKontrakPintar from '../../komponen/PembelianKontrakPintar';
 import TransactionCard from '../../komponen/TransactionCard';
 import transactionExpiryManager from '../../utils/transactionExpiry';
@@ -31,6 +31,153 @@ import {
   UserIcon,
   BuildingStorefrontIcon
 } from '@heroicons/react/24/outline';
+
+// Simple Timer Component
+const SimpleTimer = ({ transaksi, onExpired }) => {
+  const [timeLeft, setTimeLeft] = useState(null);
+  const [isExpired, setIsExpired] = useState(false);
+
+  useEffect(() => {
+    if (!transaksi || transaksi.status !== 'MENUNGGU_PEMBAYARAN') {
+      return;
+    }
+
+    const createdAt = new Date(transaksi.dibuatPada);
+    const expiryTime = new Date(createdAt.getTime() + 15 * 60 * 1000); // 15 menit
+
+    const updateTimer = () => {
+      const now = new Date();
+      const difference = expiryTime.getTime() - now.getTime();
+
+      if (difference <= 0) {
+        setTimeLeft({ minutes: 0, seconds: 0 });
+        setIsExpired(true);
+        if (onExpired) {
+          onExpired(transaksi);
+        }
+        return;
+      }
+
+      const minutes = Math.floor(difference / (1000 * 60));
+      const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+      setTimeLeft({ minutes, seconds });
+      setIsExpired(false);
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    return () => clearInterval(interval);
+  }, [transaksi, onExpired]);
+
+  if (!transaksi || transaksi.status !== 'MENUNGGU_PEMBAYARAN') {
+    return null;
+  }
+
+  if (isExpired) {
+    return (
+      <div className="text-xs text-red-600 font-medium">
+        Waktu habis
+      </div>
+    );
+  }
+
+  if (timeLeft) {
+    return (
+      <div className={`text-xs font-medium ${
+        timeLeft.minutes < 5
+          ? 'text-red-600'
+          : timeLeft.minutes < 10
+            ? 'text-orange-600'
+            : 'text-blue-600'
+      }`}>
+        {String(timeLeft.minutes).padStart(2, '0')}:{String(timeLeft.seconds).padStart(2, '0')}
+      </div>
+    );
+  }
+
+  return (
+    <div className="text-xs text-blue-600 font-medium">
+      Memuat...
+    </div>
+  );
+};
+
+// Simple Timer Button Component - combines timer with payment button
+const SimpleTimerButton = ({ transaksi, onExpired, onPayment }) => {
+  const [timeLeft, setTimeLeft] = useState(null);
+  const [isExpired, setIsExpired] = useState(false);
+
+  useEffect(() => {
+    if (!transaksi || transaksi.status !== 'MENUNGGU_PEMBAYARAN') {
+      return;
+    }
+
+    const createdAt = new Date(transaksi.dibuatPada);
+    const expiryTime = new Date(createdAt.getTime() + 15 * 60 * 1000); // 15 menit
+
+    const updateTimer = () => {
+      const now = new Date();
+      const difference = expiryTime.getTime() - now.getTime();
+
+      if (difference <= 0) {
+        setTimeLeft({ minutes: 0, seconds: 0 });
+        setIsExpired(true);
+        if (onExpired) {
+          onExpired(transaksi);
+        }
+        return;
+      }
+
+      const minutes = Math.floor(difference / (1000 * 60));
+      const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+      setTimeLeft({ minutes, seconds });
+      setIsExpired(false);
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    return () => clearInterval(interval);
+  }, [transaksi, onExpired]);
+
+  if (!transaksi || transaksi.status !== 'MENUNGGU_PEMBAYARAN') {
+    return null;
+  }
+
+  if (isExpired) {
+    return (
+      <div className="inline-flex items-center px-2 py-1 border border-red-300 text-xs font-medium rounded text-red-700 bg-red-50">
+        <ExclamationTriangleIcon className="h-3 w-3 mr-1" />
+        Waktu Habis
+      </div>
+    );
+  }
+
+  if (timeLeft) {
+    return (
+      <button
+        onClick={() => onPayment && onPayment(transaksi)}
+        className={`inline-flex items-center justify-center px-2 py-1 border border-transparent text-xs font-medium rounded text-white transition-colors w-24 ${
+          timeLeft.minutes < 5
+            ? 'bg-red-600 hover:bg-red-700'
+            : timeLeft.minutes < 10
+              ? 'bg-orange-600 hover:bg-orange-700'
+              : 'bg-blue-600 hover:bg-blue-700'
+        }`}
+        title={`${timeLeft.minutes} menit ${timeLeft.seconds} detik tersisa`}
+      >
+        <BanknotesIcon className="h-3 w-3 mr-1" />
+        Bayar ({String(timeLeft.minutes).padStart(2, '0')}:{String(timeLeft.seconds).padStart(2, '0')})
+      </button>
+    );
+  }
+
+  return (
+    <div className="inline-flex items-center px-2 py-1 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-blue-50">
+      <BanknotesIcon className="h-3 w-3 mr-1" />
+      Memuat...
+    </div>
+  );
+};
 
 const Dashboard = () => {
   // State management
@@ -699,7 +846,7 @@ const Dashboard = () => {
                         };
                         const config = statusConfig[status] || { color: 'bg-gray-100 text-gray-800', text: status };
                         return (
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.color}`}>
+                          <span className={`inline-flex items-center px-3 py-1 rounded-md text-xs font-medium ${config.color}`}>
                             {config.text}
                           </span>
                         );
@@ -714,23 +861,14 @@ const Dashboard = () => {
                             <div className="mb-1">
                               {getStatusBadge(item.status)}
                             </div>
-                            {/* Payment Timer for MENUNGGU_PEMBAYARAN */}
-                            {activeTab === 'pembelian' && item.status === 'MENUNGGU_PEMBAYARAN' && (
-                              <div>
-                                <PaymentTimer
-                                  transaksi={item}
-                                  onExpired={handlePaymentExpired}
-                                  onPayment={handlePayment}
-                                />
-                              </div>
-                            )}
                           </td>
                           <td className="px-4 py-2 whitespace-nowrap">
                             <div className="flex items-center">
                               <img
-                                src={item.produk?.gambar || '/placeholder-game.jpg'}
+                                src={getProductImageUrl(item.produk?.gambar) || '/placeholder-game.svg'}
                                 alt={item.produk?.judulProduk || 'Produk'}
                                 className="w-8 h-8 rounded-lg object-cover mr-2"
+                                onError={createImageErrorHandler()}
                               />
                               <div>
                                 <div className="text-sm font-medium text-gray-900">
@@ -839,17 +977,6 @@ const Dashboard = () => {
                                 </button>
                               )}
 
-                              {/* Tombol Bayar (Pembeli) */}
-                              {activeTab === 'pembelian' && item.status === 'MENUNGGU_PEMBAYARAN' && (
-                                <button
-                                  onClick={() => handlePayment(item)}
-                                  className="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded text-white bg-blue-600 hover:bg-blue-700"
-                                  title="Bayar Sekarang"
-                                >
-                                  <BanknotesIcon className="h-3 w-3" />
-                                </button>
-                              )}
-                              
                               {/* Tombol Detail */}
                               <button
                                 onClick={() => handleDetailClick(item)}
@@ -858,6 +985,15 @@ const Dashboard = () => {
                               >
                                 <EyeIcon className="h-3 w-3" />
                               </button>
+
+                              {/* Tombol Bayar dengan Timer (Pembeli) */}
+                              {activeTab === 'pembelian' && item.status === 'MENUNGGU_PEMBAYARAN' && (
+                                <SimpleTimerButton
+                                  transaksi={item}
+                                  onExpired={handlePaymentExpired}
+                                  onPayment={handlePayment}
+                                />
+                              )}
                             </div>
                           </td>
                         </tr>
