@@ -178,7 +178,7 @@ const ProdukAdmin = () => {
     };
     const config = statusConfig[status] || { color: 'bg-gray-100 text-gray-800', text: status };
     return (
-      <span className={`px-2 py-1 rounded-full text-xs font-medium ${config.color}`}>
+      <span className={`px-2 py-1 rounded text-xs font-medium ${config.color}`}>
         {config.text}
       </span>
     );
@@ -351,121 +351,158 @@ const ProdukAdmin = () => {
                   </p>
                 </div>
               ) : (
-                <div className="p-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {produk.map((item) => (
-                      <div key={item.id} className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-lg transition-shadow duration-200">
-                        <div className="relative h-32 bg-gray-100">
-                          {(() => {
-                            // Handle both array and string format for images
-                            let imageUrl = null;
-                            let images = [];
-                            
-                            // Parse gambar data - could be array, JSON string, or regular string
-                            if (Array.isArray(item.gambar) && item.gambar.length > 0) {
-                              images = item.gambar;
-                              imageUrl = item.gambar[0];
-                            } else if (typeof item.gambar === 'string' && item.gambar.trim()) {
-                              try {
-                                // Try to parse as JSON array first
-                                const parsed = JSON.parse(item.gambar);
-                                if (Array.isArray(parsed) && parsed.length > 0) {
-                                  images = parsed;
-                                  imageUrl = parsed[0];
-                                } else {
-                                  // Single string URL
-                                  imageUrl = item.gambar;
-                                  images = [item.gambar];
-                                }
-                              } catch (e) {
-                                // Not JSON, treat as single URL
-                                imageUrl = item.gambar;
-                                images = [item.gambar];
-                              }
-                            }
-
-                            return imageUrl ? (
-                              <img
-                                src={imageUrl}
-                                alt={item.judulProduk}
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                onError={(e) => {
-                                  console.log('❌ Gambar gagal dimuat:', imageUrl);
-                                  e.target.style.display = 'none';
-                                  e.target.nextElementSibling.style.display = 'flex';
-                                }}
-                                onLoad={() => {
-                                  console.log('✅ Gambar berhasil dimuat:', imageUrl);
-                                }}
-                              />
-                            ) : null;
-                          })()}
-                          <div 
-                            className="w-full h-full flex flex-col items-center justify-center text-center"
-                            style={{ display: (() => {
-                              let imageUrl = null;
-                              if (Array.isArray(item.gambar) && item.gambar.length > 0) {
-                                imageUrl = item.gambar[0];
-                              } else if (typeof item.gambar === 'string' && item.gambar.trim()) {
-                                try {
-                                  const parsed = JSON.parse(item.gambar);
-                                  if (Array.isArray(parsed) && parsed.length > 0) {
-                                    imageUrl = parsed[0];
-                                  } else {
-                                    imageUrl = item.gambar;
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          No
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Produk
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Game
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Harga
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Penjual
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Status
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Tanggal
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Aksi
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {produk.map((item, index) => (
+                        <tr key={item.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-2 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900">
+                              {(currentPage - 1) * 12 + index + 1}
+                            </div>
+                          </td>
+                          <td className="px-6 py-2 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center mr-3 overflow-hidden">
+                                {(() => {
+                                  // Handle both array and string format for images
+                                  let imageUrl = null;
+                                  
+                                  // Parse gambar data - could be array, JSON string, or regular string
+                                  if (Array.isArray(item.gambar) && item.gambar.length > 0) {
+                                    imageUrl = item.gambar[0];
+                                  } else if (typeof item.gambar === 'string' && item.gambar.trim()) {
+                                    try {
+                                      // Try to parse as JSON array first
+                                      const parsed = JSON.parse(item.gambar);
+                                      if (Array.isArray(parsed) && parsed.length > 0) {
+                                        imageUrl = parsed[0];
+                                      } else {
+                                        // Single string URL
+                                        imageUrl = item.gambar;
+                                      }
+                                    } catch (e) {
+                                      // Not JSON, treat as single URL
+                                      imageUrl = item.gambar;
+                                    }
                                   }
-                                } catch (e) {
-                                  imageUrl = item.gambar;
-                                }
-                              }
-                              return imageUrl ? 'none' : 'flex';
-                            })() }}
-                          >
-                            <PhotoIcon className="h-10 w-10 text-gray-300 mb-2" />
-                            <span className="text-xs text-gray-400">Tidak ada gambar</span>
-                          </div>
-                          <div className="absolute top-1.5 left-1.5">
-                            <span className="bg-blue-600 text-white text-xs px-1.5 py-0.5 rounded text-[10px]">
-                              {item.kodeProduk}
-                            </span>
-                          </div>
-                          {/* Status Badge */}
-                          <div className="absolute top-1.5 right-1.5">
-                            {getStatusBadge(item.statusProduk)}
-                          </div>
-                        </div>
-                        <div className="p-4">
-                          <div className="flex items-start justify-between mb-2">
-                            <h3 className="text-sm font-medium text-gray-900 line-clamp-2 flex-1 mr-2">
-                              {item.judulProduk}
-                            </h3>
-                          </div>
-                          <p className="text-xs text-gray-500 mb-2">{item.namaGame}</p>
-                          <div className="mb-2">
-                            <p className="text-lg font-semibold text-blue-600">
+
+                                  return imageUrl ? (
+                                    <img
+                                      src={imageUrl}
+                                      alt={item.judulProduk}
+                                      className="w-full h-full object-cover"
+                                      onError={(e) => {
+                                        console.log('❌ Gambar gagal dimuat:', imageUrl);
+                                        e.target.style.display = 'none';
+                                        e.target.nextElementSibling.style.display = 'flex';
+                                      }}
+                                      onLoad={() => {
+                                        console.log('✅ Gambar berhasil dimuat:', imageUrl);
+                                      }}
+                                    />
+                                  ) : null;
+                                })()}
+                                <div
+                                  className="w-full h-full flex flex-col items-center justify-center text-center"
+                                  style={{ display: (() => {
+                                    let imageUrl = null;
+                                    if (Array.isArray(item.gambar) && item.gambar.length > 0) {
+                                      imageUrl = item.gambar[0];
+                                    } else if (typeof item.gambar === 'string' && item.gambar.trim()) {
+                                      try {
+                                        const parsed = JSON.parse(item.gambar);
+                                        if (Array.isArray(parsed) && parsed.length > 0) {
+                                          imageUrl = parsed[0];
+                                        } else {
+                                          imageUrl = item.gambar;
+                                        }
+                                      } catch (e) {
+                                        imageUrl = item.gambar;
+                                      }
+                                    }
+                                    return imageUrl ? 'none' : 'flex';
+                                  })() }}
+                                >
+                                  <PhotoIcon className="h-6 w-6 text-gray-300" />
+                                </div>
+                              </div>
+                              <div>
+                                <div className="text-sm font-medium text-gray-900 max-w-xs truncate">
+                                  {item.judulProduk}
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  Kode: {item.kodeProduk}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-2 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{item.namaGame}</div>
+                          </td>
+                          <td className="px-6 py-2 whitespace-nowrap">
+                            <div className="text-sm font-medium text-blue-600">
                               {item.hargaEth ? `${item.hargaEth} ETH` : 'N/A'}
-                            </p>
-                            <p className="text-xs text-gray-500">
+                            </div>
+                            <div className="text-xs text-gray-500">
                               ≈ {formatCurrency(item.harga || 0)}
-                            </p>
-                          </div>
-                          <p className="text-xs text-gray-500 mb-3">
-                            Penjual: {item.penjual?.nama || 'N/A'}
-                          </p>
-                          <p className="text-xs text-gray-400 mb-3">
-                            {new Date(item.dibuatPada).toLocaleDateString('id-ID')}
-                          </p>
-                          <button
-                            onClick={() => handleDetailClick(item)}
-                            className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center justify-center"
-                          >
-                            <EyeIcon className="h-4 w-4 mr-2" />
-                            Detail
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-2 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{item.penjual?.nama || 'N/A'}</div>
+                            {item.penjual?.email && (
+                              <div className="text-xs text-gray-500">{item.penjual.email}</div>
+                            )}
+                          </td>
+                          <td className="px-6 py-2 whitespace-nowrap">
+                            {getStatusBadge(item.statusProduk)}
+                          </td>
+                          <td className="px-6 py-2 whitespace-nowrap">
+                            <div className="text-sm text-gray-500">
+                              {new Date(item.dibuatPada).toLocaleDateString('id-ID')}
+                            </div>
+                          </td>
+                          <td className="px-6 py-2 whitespace-nowrap">
+                            <button
+                              onClick={() => handleDetailClick(item)}
+                              className="inline-flex items-center px-3 py-1 border border-gray-300 shadow-sm text-xs leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                            >
+                              <EyeIcon className="h-4 w-4 mr-1" />
+                              Detail
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
 

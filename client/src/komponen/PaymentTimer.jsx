@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ClockIcon, ExclamationTriangleIcon, CurrencyDollarIcon } from '@heroicons/react/24/outline';
+import toast from 'react-hot-toast';
 
 const PaymentTimer = ({ transaksi, onExpired, onPayment }) => {
   const [timeLeft, setTimeLeft] = useState(null);
@@ -29,13 +30,10 @@ const PaymentTimer = ({ transaksi, onExpired, onPayment }) => {
         if (!hasNotifiedExpired) {
           setHasNotifiedExpired(true);
           
-          // Notifikasi browser
-          if ('Notification' in window && Notification.permission === 'granted') {
-            new Notification('Waktu Pembayaran Habis', {
-              body: `Batas waktu pembayaran untuk transaksi ${transaksi.kodeTransaksi} telah berakhir. Produk dikembalikan ke market.`,
-              icon: '/favicon.ico'
-            });
-          }
+          // Notifikasi toast
+          toast.error(`⏰ Waktu pembayaran habis untuk transaksi ${transaksi.kodeTransaksi}. Produk dikembalikan ke market.`, {
+            duration: 6000
+          });
           
           // Callback untuk mengembalikan produk ke market
           if (onExpired) {
@@ -53,10 +51,6 @@ const PaymentTimer = ({ transaksi, onExpired, onPayment }) => {
       setIsExpired(false);
     };
 
-    // Minta izin notifikasi
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission();
-    }
 
     updateTimer();
     const interval = setInterval(updateTimer, 1000);

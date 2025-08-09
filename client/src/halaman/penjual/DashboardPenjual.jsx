@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../konteks/AuthContext';
 import { transaksiAPI, produkAPI } from '../../layanan/api';
 import { useDashboardUpdates } from '../../hooks/useRealTimeUpdates';
+import { useEthToIdrRate } from '../../hooks/useEthPrice';
 import { accountDataHelper } from '../../utils/accountDataHelper';
 import { getProductImageUrl, createImageErrorHandler } from '../../utils/imageHelper';
 import toast from 'react-hot-toast';
@@ -37,6 +38,9 @@ const DashboardPenjual = () => {
   const [filter, setFilter] = useState('all');
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const [refreshing, setRefreshing] = useState(false);
+  
+  // Real-time ETH price
+  const { rate: ethToIdrRate } = useEthToIdrRate();
   
   // Modal states
   const [showLihatAkunModal, setShowLihatAkunModal] = useState(false);
@@ -606,25 +610,25 @@ const DashboardPenjual = () => {
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Produk
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Transaksi
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Harga
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Pembeli
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Status
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Tanggal
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Aksi
                       </th>
                     </tr>
@@ -632,12 +636,12 @@ const DashboardPenjual = () => {
                   <tbody className="bg-white divide-y divide-gray-200">
                     {transaksi.map((item) => (
                       <tr key={item.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-2 whitespace-nowrap">
+                        <td className="px-4 py-2 whitespace-nowrap">
                           <div className="flex items-center">
                             <img
                               src={getProductImageUrl(item.produk?.gambar)}
                               alt={item.produk?.judulProduk || 'Produk'}
-                              className="w-10 h-10 rounded-lg object-cover mr-3"
+                              className="w-8 h-8 rounded-lg object-cover mr-2"
                               onError={createImageErrorHandler()}
                             />
                             <div>
@@ -650,23 +654,23 @@ const DashboardPenjual = () => {
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-2 whitespace-nowrap">
+                        <td className="px-4 py-2 whitespace-nowrap">
                           <div className="text-sm text-gray-900">{item.kodeTransaksi || item.id}</div>
                           {item.escrowId && (
                             <div className="text-xs text-gray-500">Escrow: {item.escrowId}</div>
                           )}
                         </td>
-                        <td className="px-6 py-2 whitespace-nowrap">
+                        <td className="px-4 py-2 whitespace-nowrap">
                           <div className="text-sm font-medium text-gray-900">
                             {item.escrowAmount ? `${parseFloat(item.escrowAmount).toFixed(4)} ETH` : 'N/A'}
                           </div>
-                          {item.produk?.harga && (
+                          {item.produk?.hargaEth && (
                             <div className="text-xs text-gray-500">
-                              ≈ {formatCurrency(item.produk.harga)}
+                              ≈ {formatCurrency((item.produk.hargaEth || 0) * 65000000)}
                             </div>
                           )}
                         </td>
-                        <td className="px-6 py-2 whitespace-nowrap">
+                        <td className="px-4 py-2 whitespace-nowrap">
                           <div className="text-sm text-gray-900">{item.pembeli?.nama || 'Anonim'}</div>
                           {item.pembeli?.walletAddress && (
                             <div className="text-xs text-gray-500 font-mono">
@@ -674,20 +678,20 @@ const DashboardPenjual = () => {
                             </div>
                           )}
                         </td>
-                        <td className="px-6 py-2 whitespace-nowrap">
+                        <td className="px-4 py-2 whitespace-nowrap">
                           {getStatusBadge(item.status)}
                           {item.status === 'SENGKETA' && (
-                            <div className="text-xs text-red-600 mt-1">
+                            <div className="text-xs text-red-600">
                               🚨 Sengketa Aktif
                             </div>
                           )}
                         </td>
-                        <td className="px-6 py-2 whitespace-nowrap">
+                        <td className="px-4 py-2 whitespace-nowrap">
                           <div className="text-sm text-gray-500">
                             {formatDate(item.dibuatPada)}
                           </div>
                         </td>
-                        <td className="px-6 py-2 whitespace-nowrap">
+                        <td className="px-4 py-2 whitespace-nowrap">
                           <div className="flex flex-wrap gap-1">
                             {/* Tombol Lihat Akun */}
                             {(() => {
@@ -716,29 +720,26 @@ const DashboardPenjual = () => {
                               </button>
                             )}
                             
-                            {/* Tombol Aksi Sengketa */}
-                            {item.status === 'SENGKETA' && (
-                              <>
-                                {/* Tombol Pembelaan - HANYA TAMPIL jika belum ada pembelaan */}
-                                {!item.sengketa?.penjualBukti && (
-                                  <button
-                                    onClick={() => handleBuatPembelaan(item)}
-                                    className="inline-flex items-center px-2 py-1 border border-red-300 text-xs font-medium rounded text-red-700 bg-red-50 hover:bg-red-100"
-                                    title="Beri Pembelaan"
-                                  >
-                                    <ExclamationTriangleIcon className="h-3 w-3" />
-                                  </button>
-                                )}
+                            {/* Tombol Pembelaan - Pindah ke kolom Aksi */}
+                            {item.status === 'SENGKETA' && !item.sengketa?.penjualBukti && (
+                              <button
+                                onClick={() => handleBuatPembelaan(item)}
+                                className="inline-flex items-center px-2 py-1 border border-red-300 text-xs font-medium rounded text-red-700 bg-red-50 hover:bg-red-100"
+                                title="Beri Pembelaan"
+                              >
+                                <ExclamationTriangleIcon className="h-3 w-3" />
+                              </button>
+                            )}
 
-                                {/* Tombol Detail Sengketa */}
-                                <button
-                                  onClick={() => handleLihatDetailSengketa(item)}
-                                  className="inline-flex items-center px-2 py-1 border border-orange-300 text-xs font-medium rounded text-orange-700 bg-orange-50 hover:bg-orange-100"
-                                  title="Detail Sengketa"
-                                >
-                                  <EyeIcon className="h-3 w-3" />
-                                </button>
-                              </>
+                            {/* Tombol Detail Sengketa */}
+                            {item.status === 'SENGKETA' && (
+                              <button
+                                onClick={() => handleLihatDetailSengketa(item)}
+                                className="inline-flex items-center px-2 py-1 border border-orange-300 text-xs font-medium rounded text-orange-700 bg-orange-50 hover:bg-orange-100"
+                                title="Detail Sengketa"
+                              >
+                                <EyeIcon className="h-3 w-3" />
+                              </button>
                             )}
                             
                             {/* Tombol Detail - Selalu ada */}

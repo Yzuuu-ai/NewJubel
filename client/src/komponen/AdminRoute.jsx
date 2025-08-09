@@ -20,7 +20,13 @@ const AdminRoute = ({ children }) => {
 
   // Jika tidak login, redirect ke halaman masuk
   if (!isAuthenticated) {
-    toastManager.error('Anda harus login sebagai admin untuk mengakses halaman ini');
+    // Hanya tampilkan toast jika bukan dari logout
+    const isFromLogout = localStorage.getItem('justLoggedOut');
+    if (!isFromLogout) {
+      setTimeout(() => {
+        toastManager.error('Anda harus login sebagai admin untuk mengakses halaman ini');
+      }, 100);
+    }
     return <Navigate to="/masuk" replace />;
   }
 

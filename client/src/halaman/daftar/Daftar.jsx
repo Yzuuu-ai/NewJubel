@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../konteks/AuthContext';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 
 const Daftar = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { register, loading, isAuthenticated } = useAuth();
   const [formData, setFormData] = useState({
     nama: '',
@@ -120,7 +121,16 @@ const Daftar = () => {
           {/* Tombol Kembali */}
           <div className="flex justify-start">
             <button
-              onClick={() => navigate(-1)}
+              onClick={() => {
+                // Cek apakah ada informasi dari mana user datang
+                const from = location.state?.from;
+                if (from === '/masuk') {
+                  navigate('/masuk');
+                } else {
+                  // Default ke beranda jika tidak ada info atau dari beranda
+                  navigate('/beranda');
+                }
+              }}
               className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 transition-colors"
             >
               <ArrowLeftIcon className="h-4 w-4 mr-2" />
@@ -233,8 +243,8 @@ const Daftar = () => {
                     errors.role ? 'border-red-300' : 'border-gray-300'
                   } placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm`}
                 >
-                  <option value="PEMBELI">👤 Pembeli - Membeli akun game</option>
-                  <option value="PENJUAL">🏪 Penjual - Menjual akun game</option>
+                  <option value="PEMBELI">Pembeli - Membeli akun game</option>
+                  <option value="PENJUAL">Penjual - Menjual akun game</option>
                 </select>
                 {errors.role && (
                   <p className="mt-1 text-xs text-red-600">
@@ -344,7 +354,13 @@ const Daftar = () => {
               {/* Link Masuk */}
               <div className="text-center text-sm text-gray-600 mt-4">
                 Sudah punya akun?{' '}
-                <Link to="/masuk" className="text-primary-600 hover:text-primary-700 transition-colors font-medium">Masuk</Link>
+                <Link
+                  to="/masuk"
+                  state={{ from: '/daftar' }}
+                  className="text-primary-600 hover:text-primary-700 transition-colors font-medium"
+                >
+                  Masuk
+                </Link>
               </div>
             </div>
           </form>

@@ -24,7 +24,7 @@ const simplePriceService = {
   },
   ethToIdr: async (ethAmount) => {
     // Simple conversion: 1 ETH = 50,000,000 IDR (approximate)
-    return parseFloat(ethAmount) * 50000000;
+    return parseFloat(ethAmount) * 65000000;
   },
   formatEth: (amount) => {
     return parseFloat(amount).toFixed(6) + ' ETH';
@@ -164,7 +164,7 @@ const tambahProduk = async (req, res) => {
       hargaIdr = await priceConversionService.ethToIdr(hargaEth);
     } catch (error) {
       console.error('❌ Error konversi harga:', error);
-      hargaIdr = parseFloat(hargaEth) * 50000000; // Fallback conversion
+      hargaIdr = parseFloat(hargaEth) * 65000000; // Fallback conversion
     }
 
     // Generate kode produk
@@ -608,7 +608,7 @@ const updateProduk = async (req, res) => {
         hargaIdr = await priceConversionService.ethToIdr(hargaEth);
       } catch (error) {
         console.error('❌ Error konversi harga:', error);
-        hargaIdr = parseFloat(hargaEth) * 50000000; // Fallback conversion
+        hargaIdr = parseFloat(hargaEth) * 65000000; // Fallback conversion
       }
 
       updateData.hargaEth = parseFloat(hargaEth);

@@ -195,7 +195,7 @@ Highlight: [sebutkan keunggulan akun]
         {imageEvidence.length > 0 && (
           <div>
             <div className="flex items-center space-x-2 mb-3">
-              <PhotoIcon className="h-4 w-4" />
+              <PhotoIcon className="h-4 w-4 text-gray-600" />
               <span className="text-sm font-medium">Bukti Gambar ({imageEvidence.length})</span>
             </div>
             <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
@@ -234,7 +234,7 @@ Highlight: [sebutkan keunggulan akun]
         {textEvidence.length > 0 && (
           <div>
             <div className="flex items-center space-x-2 mb-3">
-              <DocumentTextIcon className="h-4 w-4" />
+              <DocumentTextIcon className="h-4 w-4 text-gray-600" />
               <span className="text-sm font-medium">Bukti Teks</span>
             </div>
             <div className="space-y-2">
@@ -257,7 +257,6 @@ Highlight: [sebutkan keunggulan akun]
           {/* Header */}
           <div className="flex justify-between items-center mb-6">
             <div className="flex items-center space-x-3">
-              <ExclamationTriangleIcon className="h-8 w-8 text-red-600" />
               <div>
                 <h3 className="text-xl font-semibold text-gray-900 break-words">
                   Detail Sengketa - {transaksi.kodeTransaksi}
@@ -266,7 +265,7 @@ Highlight: [sebutkan keunggulan akun]
                   {transaksi.produk?.judulProduk} - {transaksi.produk?.namaGame}
                 </p>
                 {disputeDetails.id && (
-                  <p className="text-xs text-gray-400 break-words">
+                  <p className="text-xs text-blue-600 break-words">
                     ID Sengketa: {disputeDetails.id}
                   </p>
                 )}
@@ -283,7 +282,7 @@ Highlight: [sebutkan keunggulan akun]
           {/* Detail Transaksi - GABUNGAN INFORMASI TRANSAKSI & PRODUK */}
           <div className="bg-gray-50 rounded-lg p-4 mb-6">
             <h4 className="font-medium text-gray-900 mb-3 flex items-center">
-              <DocumentTextIcon className="h-5 w-5 mr-2" />
+              <DocumentTextIcon className="h-5 w-5 mr-2 text-gray-600" />
               Detail Transaksi
             </h4>
             <div className="space-y-4">
@@ -388,7 +387,7 @@ Highlight: [sebutkan keunggulan akun]
             {/* Laporan Sengketa dari Pembeli - KIRI */}
             <div className="bg-white border border-gray-200 rounded-lg p-4 min-h-0">
               <h4 className="font-medium text-gray-900 mb-3 flex items-center">
-                <UserIcon className="h-5 w-5 mr-2" />
+                <UserIcon className="h-5 w-5 mr-2 text-gray-600" />
                 Laporan Sengketa dari Pembeli
               </h4>
               <div className="space-y-4">
@@ -427,7 +426,7 @@ Highlight: [sebutkan keunggulan akun]
             {disputeDetails.hasSellerResponse ? (
               <div className="bg-white border border-gray-200 rounded-lg p-4 min-h-0">
                 <h4 className="font-medium text-gray-900 mb-3 flex items-center">
-                  <ShieldCheckIcon className="h-5 w-5 mr-2" />
+                  <ShieldCheckIcon className="h-5 w-5 mr-2 text-gray-600" />
                   Pembelaan dari Penjual
                 </h4>
                 <div className="space-y-4">
@@ -456,7 +455,7 @@ Highlight: [sebutkan keunggulan akun]
             ) : (
               <div className="bg-white border border-gray-200 rounded-lg p-4 min-h-0">
                 <h4 className="font-medium text-gray-900 mb-2 flex items-center">
-                  <ExclamationTriangleIcon className="h-5 w-5 mr-2" />
+                  <ExclamationTriangleIcon className="h-5 w-5 mr-2 text-gray-600" />
                   Pembelaan Penjual
                 </h4>
                 <p className="text-sm text-gray-700 break-words">
@@ -469,7 +468,7 @@ Highlight: [sebutkan keunggulan akun]
           {/* Keputusan Admin */}
           <div className="bg-white border border-gray-200 rounded-lg p-4">
             <h4 className="font-medium text-gray-900 mb-3 flex items-center">
-              <ShieldCheckIcon className="h-5 w-5 mr-2" />
+              <ShieldCheckIcon className="h-5 w-5 mr-2 text-gray-600" />
               Keputusan Admin
             </h4>
             

@@ -328,7 +328,7 @@ const ModalDetailTransaksi = ({ isOpen, onClose, transaksi, onRefresh }) => {
                         </strong>
                       </div>
                     ) : isExpired ? (
-                      <div className="flex items-center gap-2 text-red-600">
+                      <div className="flex items-center gap-2 text-gray-600">
                         <ExclamationTriangleIcon className="h-5 w-5" />
                         <span className="font-semibold">Waktu pembayaran telah habis</span>
                       </div>
@@ -353,7 +353,7 @@ const ModalDetailTransaksi = ({ isOpen, onClose, transaksi, onRefresh }) => {
                         <h4 className="font-medium text-gray-900 text-lg">{transaksi?.produk?.judulProduk || 'Produk Tidak Ditemukan'}</h4>
                         <p className="text-sm text-gray-600 mb-2">{transaksi?.produk?.namaGame || 'Game'}</p>
                         <div className="mb-3">
-                          <span className="text-lg font-semibold text-blue-600">
+                          <span className="text-lg font-semibold text-gray-900">
                             {transaksi?.escrowAmount ? `${parseFloat(transaksi.escrowAmount).toFixed(4)} ETH` :
                              transaksi?.produk?.hargaEth ? `${transaksi.produk.hargaEth} ETH` : 'N/A'}
                           </span>
@@ -390,7 +390,7 @@ const ModalDetailTransaksi = ({ isOpen, onClose, transaksi, onRefresh }) => {
                     {transaksi?.escrowId && (
                       <div className="flex justify-between">
                         <span className="text-sm text-gray-600">Escrow ID:</span>
-                        <span className="text-sm font-medium text-blue-600">#{transaksi.escrowId}</span>
+                        <span className="text-sm font-medium text-gray-900">#{transaksi.escrowId}</span>
                       </div>
                     )}
                     {transaksi?.pembeli && (
@@ -411,30 +411,29 @@ const ModalDetailTransaksi = ({ isOpen, onClose, transaksi, onRefresh }) => {
                 {/* Enhanced Dispute Information */}
                 {transaksi?.status === 'SENGKETA' && transaksi?.sengketa && (
                   <div className="bg-red-50 rounded-lg border border-red-200 overflow-hidden">
-                    <div className="bg-red-100 px-4 py-3 border-b border-red-200">
-                      <h3 className="font-semibold text-red-900 flex items-center">
-                        <ExclamationTriangleIcon className="h-5 w-5 mr-2" />
+                    <div className="bg-gray-100 px-4 py-3 border-b border-gray-200">
+                      <h3 className="font-semibold text-gray-900 flex items-center">
                         Informasi Sengketa
                       </h3>
                     </div>
                     
                     <div className="p-4 space-y-4">
                       <div className="grid grid-cols-1 gap-3">
-                        <div className="flex justify-between items-center py-2 border-b border-red-100">
-                          <span className="text-sm font-medium text-red-600">ID Sengketa:</span>
-                          <span className="text-sm font-mono text-red-900 bg-red-100 px-2 py-1 rounded">
+                        <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                          <span className="text-sm font-medium text-gray-600">ID Sengketa:</span>
+                          <span className="text-sm font-mono text-blue-600 bg-blue-100 px-2 py-1 rounded">
                             {transaksi.sengketa.id}
                           </span>
                         </div>
-                        <div className="flex justify-between items-center py-2 border-b border-red-100">
-                          <span className="text-sm font-medium text-red-600">Status:</span>
-                          <span className="text-sm font-semibold text-red-900">
+                        <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                          <span className="text-sm font-medium text-gray-600">Status:</span>
+                          <span className="text-sm font-semibold text-gray-900">
                             {transaksi.sengketa.status || 'DIPROSES'}
                           </span>
                         </div>
-                        <div className="flex justify-between items-center py-2 border-b border-red-100">
-                          <span className="text-sm font-medium text-red-600">Tanggal Dibuat:</span>
-                          <span className="text-sm text-red-900">
+                        <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                          <span className="text-sm font-medium text-gray-600">Tanggal Dibuat:</span>
+                          <span className="text-sm text-gray-900">
                             {transaksi.sengketa.dibuatPada ? new Date(transaksi.sengketa.dibuatPada).toLocaleString('id-ID') : 'Tidak tersedia'}
                           </span>
                         </div>
@@ -442,9 +441,9 @@ const ModalDetailTransaksi = ({ isOpen, onClose, transaksi, onRefresh }) => {
 
                       {transaksi.sengketa.deskripsi && (
                         <div className="space-y-2">
-                          <label className="text-sm font-medium text-red-600 block">Alasan Sengketa:</label>
-                          <div className="bg-white border border-red-200 rounded-lg p-3">
-                            <p className="text-sm text-red-800 leading-relaxed break-words">
+                          <label className="text-sm font-medium text-gray-600 block">Alasan Sengketa:</label>
+                          <div className="bg-white border border-gray-200 rounded-lg p-3">
+                            <p className="text-sm text-gray-800 leading-relaxed break-words">
                               {transaksi.sengketa.deskripsi}
                             </p>
                           </div>
@@ -453,8 +452,8 @@ const ModalDetailTransaksi = ({ isOpen, onClose, transaksi, onRefresh }) => {
 
                       {transaksi.sengketa.pembeliBukti && (
                         <div className="space-y-2">
-                          <label className="text-sm font-medium text-red-600 block">Bukti Pembeli:</label>
-                          <div className="bg-white border border-red-200 rounded-lg p-3">
+                          <label className="text-sm font-medium text-gray-600 block">Bukti Pembeli:</label>
+                          <div className="bg-white border border-gray-200 rounded-lg p-3">
                             <EvidenceImageGallery 
                               evidenceData={transaksi.sengketa.pembeliBukti} 
                               label="Bukti Pembeli" 
@@ -763,46 +762,46 @@ const ModalDetailTransaksi = ({ isOpen, onClose, transaksi, onRefresh }) => {
                                   <div className="space-y-2 text-xs">
                                     {step.details.productName && (
                                       <div className="flex justify-between">
-                                        <span className="text-blue-600">Produk:</span>
-                                        <span className="text-blue-800 font-medium">{step.details.productName}</span>
+                                        <span className="text-gray-600">Produk:</span>
+                                        <span className="text-gray-800 font-medium">{step.details.productName}</span>
                                       </div>
                                     )}
                                     {step.details.gameName && (
                                       <div className="flex justify-between">
-                                        <span className="text-blue-600">Game:</span>
-                                        <span className="text-blue-800">{step.details.gameName}</span>
+                                        <span className="text-gray-600">Game:</span>
+                                        <span className="text-gray-800">{step.details.gameName}</span>
                                       </div>
                                     )}
                                     {step.details.priceEth && (
                                       <div className="flex justify-between">
-                                        <span className="text-blue-600">Harga:</span>
-                                        <span className="text-blue-800 font-mono">{step.details.priceEth} ETH</span>
+                                        <span className="text-gray-600">Harga:</span>
+                                        <span className="text-gray-800 font-mono">{step.details.priceEth} ETH</span>
                                       </div>
                                     )}
                                     {step.escrowInfo && (
                                       <>
                                         <div className="flex justify-between">
-                                          <span className="text-blue-600">Escrow ID:</span>
-                                          <span className="text-blue-800 font-mono">#{step.escrowInfo.escrowId}</span>
+                                          <span className="text-gray-600">Escrow ID:</span>
+                                          <span className="text-gray-800 font-mono">#{step.escrowInfo.escrowId}</span>
                                         </div>
                                         <div className="flex justify-between">
-                                          <span className="text-blue-600">Dana Escrow:</span>
-                                          <span className="text-blue-800 font-mono">{step.escrowInfo.amount} ETH</span>
+                                          <span className="text-gray-600">Dana Escrow:</span>
+                                          <span className="text-gray-800 font-mono">{step.escrowInfo.amount} ETH</span>
                                         </div>
                                       </>
                                     )}
                                     {step.evidenceDescription && (
                                       <div>
-                                        <span className="text-blue-600 block mb-1">Catatan Penjual:</span>
-                                        <div className="bg-white border border-blue-200 rounded p-2 text-blue-800">
+                                        <span className="text-gray-600 block mb-1">Catatan Penjual:</span>
+                                        <div className="bg-white border border-gray-200 rounded p-2 text-gray-800">
                                           {step.evidenceDescription}
                                         </div>
                                       </div>
                                     )}
                                     {step.refundReason && (
                                       <div>
-                                        <span className="text-blue-600 block mb-1">Alasan Refund:</span>
-                                        <div className="bg-white border border-blue-200 rounded p-2 text-blue-800">
+                                        <span className="text-gray-600 block mb-1">Alasan Refund:</span>
+                                        <div className="bg-white border border-gray-200 rounded p-2 text-gray-800">
                                           {step.refundReason}
                                         </div>
                                       </div>
@@ -819,15 +818,15 @@ const ModalDetailTransaksi = ({ isOpen, onClose, transaksi, onRefresh }) => {
                                   </div>
                                   <div className="p-3 space-y-3">
                                     <div className="text-xs">
-                                      <span className="text-red-600 font-medium">ID Sengketa:</span>
-                                      <span className="ml-2 text-red-800 font-mono bg-red-100 px-1 py-0.5 rounded">
+                                      <span className="text-gray-600 font-medium">ID Sengketa:</span>
+                                      <span className="ml-2 text-blue-600 font-mono bg-blue-100 px-1 py-0.5 rounded">
                                         {step.disputeData.id}
                                       </span>
                                     </div>
                                     {step.disputeData.deskripsi && (
                                       <div className="text-xs">
-                                        <span className="text-red-600 font-medium block mb-1">Alasan:</span>
-                                        <div className="bg-white border border-red-200 rounded p-2 text-red-800 leading-relaxed">
+                                        <span className="text-gray-600 font-medium block mb-1">Alasan:</span>
+                                        <div className="bg-white border border-gray-200 rounded p-2 text-gray-800 leading-relaxed">
                                           {step.disputeData.deskripsi}
                                         </div>
                                       </div>

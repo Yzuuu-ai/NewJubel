@@ -582,30 +582,30 @@ const DashboardPembeli = () => {
                 </div>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {transaksi.map((item) => (
-                  <div key={item.id} className="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors">
-                    <div className="flex flex-col space-y-3">
+                  <div key={item.id} className="bg-gray-50 rounded-lg p-3 hover:bg-gray-100 transition-colors">
+                    <div className="flex flex-col space-y-2">
                       {/* Product Info */}
                       <div className="flex items-start space-x-3">
                         <img
                           src={item.produk?.gambar || '/placeholder-game.jpg'}
                           alt={item.produk?.judulProduk || 'Produk'}
-                          className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg object-cover flex-shrink-0"
+                          className="w-12 h-12 sm:w-16 sm:h-16 rounded-lg object-cover flex-shrink-0"
                         />
                         <div className="flex-1 min-w-0">
-                          <h3 className="text-sm sm:text-base font-medium text-gray-900 line-clamp-2">
+                          <h3 className="text-sm font-medium text-gray-900 line-clamp-2">
                             {item.produk?.judulProduk || 'Produk Tidak Ditemukan'}
                           </h3>
-                          <p className="text-xs sm:text-sm text-gray-500 mt-1">
+                          <p className="text-xs text-gray-500">
                             {item.produk?.namaGame || 'Game'}
                           </p>
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="text-xs text-gray-500">
                             Kode: {item.kodeTransaksi || item.id}
                           </p>
-                          <div className="flex items-center space-x-2 mt-2">
-                            <p className="text-sm sm:text-base font-semibold text-blue-600">
-                              {item.escrowAmount ? `${parseFloat(item.escrowAmount).toFixed(4)} ETH` : 
+                          <div className="flex items-center space-x-2 mt-1">
+                            <p className="text-sm font-semibold text-blue-600">
+                              {item.escrowAmount ? `${parseFloat(item.escrowAmount).toFixed(4)} ETH` :
                                item.produk?.hargaEth ? `${item.produk.hargaEth} ETH` : 'N/A'}
                             </p>
                           </div>
@@ -613,7 +613,7 @@ const DashboardPembeli = () => {
                       </div>
                       
                       {/* Status and Date */}
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-1 sm:space-y-0">
                         <div className="flex items-center space-x-2">
                           {getStatusBadge(item.status)}
                         </div>
@@ -622,7 +622,7 @@ const DashboardPembeli = () => {
                             {formatDate(item.dibuatPada)}
                           </p>
                           {item.escrowId && (
-                            <p className="text-xs text-blue-600 mt-1">
+                            <p className="text-xs text-blue-600">
                               Escrow ID: {item.escrowId}
                             </p>
                           )}

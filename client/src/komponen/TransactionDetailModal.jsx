@@ -57,13 +57,10 @@ const TransactionDetailModal = ({
         if (!hasNotifiedExpired) {
           setHasNotifiedExpired(true);
           
-          // Notifikasi browser
-          if ('Notification' in window && Notification.permission === 'granted') {
-            new Notification('Waktu Pembayaran Habis', {
-              body: 'Batas waktu 15 menit untuk menyelesaikan pembayaran telah berakhir. Produk dikembalikan ke market.',
-              icon: '/favicon.ico'
-            });
-          }
+          // Notifikasi toast
+          toast.error('⏰ Waktu pembayaran habis! Produk dikembalikan ke market.', {
+            duration: 6000
+          });
           
           // Callback untuk mengembalikan produk ke market
           if (onExpired) {
@@ -83,10 +80,6 @@ const TransactionDetailModal = ({
       setIsExpired(false);
     };
 
-    // Minta izin notifikasi
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission();
-    }
 
     updateTimer();
     const interval = setInterval(updateTimer, 1000);

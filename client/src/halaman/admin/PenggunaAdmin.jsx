@@ -9,7 +9,6 @@ import {
   MagnifyingGlassIcon,
   XMarkIcon
 } from '@heroicons/react/24/outline';
-import toast from 'react-hot-toast';
 
 const PenggunaAdmin = () => {
   const location = useLocation();
@@ -18,6 +17,7 @@ const PenggunaAdmin = () => {
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [deleteConfirmed, setDeleteConfirmed] = useState(false);
   const [updateLoading, setUpdateLoading] = useState(false);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -122,11 +122,11 @@ const PenggunaAdmin = () => {
       // Only set error if we don't have any users loaded
       if (users.length === 0) {
         setError('Gagal memuat data pengguna. Silakan coba lagi.');
-        toast.error('Gagal memuat data pengguna');
+        console.error('Gagal memuat data pengguna');
       } else {
         // If we have users but got an error (maybe network issue), just log it
         console.warn('Error occurred but users are already loaded, not showing error message');
-        toast.error('Terjadi kesalahan saat memperbarui data');
+        console.error('Terjadi kesalahan saat memperbarui data');
       }
     } finally {
       setLoading(false);
@@ -228,7 +228,10 @@ const PenggunaAdmin = () => {
     setShowDetailModal(true);
   };
 
+
   const handleDeleteUser = async (userId) => {
+    if (!deleteConfirmed) return;
+    
     try {
       setUpdateLoading(true);
       const response = await adminAPI.deleteUser(userId);
@@ -236,39 +239,30 @@ const PenggunaAdmin = () => {
       if (response.data && response.data.sukses !== false) {
         await fetchUsers();
         setShowDetailModal(false);
-        toast.success('User berhasil dihapus!');
+        setDeleteConfirmed(false);
+        // Simple success message without toast
+        console.log('User deleted successfully');
       } else {
         throw new Error(response.data?.pesan || 'Gagal menghapus user');
       }
     } catch (error) {
       console.error('Error deleting user:', error);
       const errorMessage = error.response?.data?.pesan || error.userMessage || error.message || 'Gagal menghapus user';
-      toast.error(errorMessage);
+      
+      // Show error in console instead of toast
+      console.error('Delete error:', errorMessage);
       
       // Show detailed error if available
       if (error.response?.data?.data?.transaksiAktif) {
         const transaksiList = error.response.data.data.transaksiAktif.map(t => t.kodeTransaksi).join(', ');
-        toast.error(`Transaksi aktif: ${transaksiList}`, { duration: 5000 });
+        console.error(`Transaksi aktif: ${transaksiList}`);
       }
       if (error.response?.data?.data?.produkAktif) {
         const produkList = error.response.data.data.produkAktif.map(p => p.judulProduk).join(', ');
-        toast.error(`Produk aktif: ${produkList}`, { duration: 5000 });
+        console.error(`Produk aktif: ${produkList}`);
       }
     } finally {
       setUpdateLoading(false);
-    }
-  };
-
-  const confirmDeleteUser = (user) => {
-    const confirmMessage = `PERINGATAN: Anda akan menghapus pengguna "${user.nama || user.email}" secara permanen!\n\nTindakan ini akan menghapus:\n- Data pengguna\n- Profil pengguna\n- Produk yang tidak aktif\n- Notifikasi\n\nData transaksi yang sudah selesai akan tetap ada untuk keperluan audit.\n\nApakah Anda yakin ingin melanjutkan?`;
-    
-    if (window.confirm(confirmMessage)) {
-      const doubleConfirm = prompt(`Untuk konfirmasi, ketik "HAPUS" (tanpa tanda kutip):`);
-      if (doubleConfirm === 'HAPUS') {
-        handleDeleteUser(user.id);
-      } else {
-        toast.error('Konfirmasi tidak sesuai. Penghapusan dibatalkan.');
-      }
     }
   };
 
@@ -565,22 +559,59 @@ const PenggunaAdmin = () => {
                   </div>
                 </div>
 
-                {/* Delete User Button */}
-                <div className="flex justify-end pt-4 border-t border-gray-200">
-                  <button
-                    onClick={() => confirmDeleteUser(selectedUser)}
-                    disabled={updateLoading}
-                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 disabled:opacity-50"
-                  >
-                    <TrashIcon className="w-4 h-4 mr-2" />
-                    {updateLoading ? 'Menghapus...' : 'Hapus Pengguna'}
-                  </button>
+                {/* Delete User Section - Single Component */}
+                <div className="pt-4 border-t border-gray-200 space-y-3">
+                  {/* Warning Message */}
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                    <p className="text-gray-800 font-medium text-sm mb-2">
+                      Anda akan menghapus pengguna "{selectedUser.nama || selectedUser.email}" secara permanen!
+                    </p>
+                    <div className="text-xs text-gray-700">
+                      <p className="font-medium mb-1">Tindakan ini akan menghapus:</p>
+                      <ul className="list-disc list-inside space-y-0.5 ml-2">
+                        <li>Data pengguna</li>
+                        <li>Profil pengguna</li>
+                        <li>Produk yang tidak aktif</li>
+                        <li>Notifikasi</li>
+                      </ul>
+                      <p className="mt-2 text-xs opacity-75">
+                        Data transaksi yang sudah selesai akan tetap ada untuk keperluan audit.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Checkbox Confirmation */}
+                  <div className="flex items-start space-x-2">
+                    <input
+                      type="checkbox"
+                      id="deleteConfirm"
+                      checked={deleteConfirmed}
+                      onChange={(e) => setDeleteConfirmed(e.target.checked)}
+                      className="mt-1 h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor="deleteConfirm" className="text-sm text-gray-700">
+                      Saya memahami bahwa tindakan ini tidak dapat dibatalkan dan akan menghapus pengguna secara permanen.
+                    </label>
+                  </div>
+
+                  {/* Delete Button */}
+                  <div className="flex justify-end">
+                    <button
+                      onClick={() => handleDeleteUser(selectedUser.id)}
+                      disabled={!deleteConfirmed || updateLoading}
+                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-gray-600 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <TrashIcon className="w-4 h-4 mr-2" />
+                      {updateLoading ? 'Menghapus...' : 'Hapus Pengguna'}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
       )}
+
     </div>
   );
 };

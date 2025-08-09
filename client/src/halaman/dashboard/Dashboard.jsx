@@ -650,25 +650,25 @@ const Dashboard = () => {
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Status
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Produk
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Kode Produk
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Harga
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         {activeTab === 'pembelian' ? 'Penjual' : 'Pembeli'}
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Waktu
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Aksi
                       </th>
                     </tr>
@@ -710,13 +710,13 @@ const Dashboard = () => {
 
                       return (
                         <tr key={item.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-2 whitespace-nowrap">
-                            <div className="mb-2">
+                          <td className="px-4 py-2 whitespace-nowrap">
+                            <div className="mb-1">
                               {getStatusBadge(item.status)}
                             </div>
                             {/* Payment Timer for MENUNGGU_PEMBAYARAN */}
                             {activeTab === 'pembelian' && item.status === 'MENUNGGU_PEMBAYARAN' && (
-                              <div className="mt-1">
+                              <div>
                                 <PaymentTimer
                                   transaksi={item}
                                   onExpired={handlePaymentExpired}
@@ -725,12 +725,12 @@ const Dashboard = () => {
                               </div>
                             )}
                           </td>
-                          <td className="px-6 py-2 whitespace-nowrap">
+                          <td className="px-4 py-2 whitespace-nowrap">
                             <div className="flex items-center">
                               <img
                                 src={item.produk?.gambar || '/placeholder-game.jpg'}
                                 alt={item.produk?.judulProduk || 'Produk'}
-                                className="w-10 h-10 rounded-lg object-cover mr-3"
+                                className="w-8 h-8 rounded-lg object-cover mr-2"
                               />
                               <div>
                                 <div className="text-sm font-medium text-gray-900">
@@ -742,13 +742,13 @@ const Dashboard = () => {
                               </div>
                             </div>
                           </td>
-                          <td className="px-6 py-2 whitespace-nowrap">
+                          <td className="px-4 py-2 whitespace-nowrap">
                             <div className="text-sm text-gray-900">#{item.kodeTransaksi || item.id}</div>
                             {item.escrowId && (
                               <div className="text-xs text-gray-500">Escrow: {item.escrowId}</div>
                             )}
                           </td>
-                          <td className="px-6 py-2 whitespace-nowrap">
+                          <td className="px-4 py-2 whitespace-nowrap">
                             <div className="text-sm font-medium text-gray-900">
                               {item.escrowAmount ? `${parseFloat(item.escrowAmount).toFixed(4)} ETH` :
                                item.produk?.hargaEth ? `${item.produk.hargaEth} ETH` : 'N/A'}
@@ -759,7 +759,7 @@ const Dashboard = () => {
                               </div>
                             )}
                           </td>
-                          <td className="px-6 py-2 whitespace-nowrap">
+                          <td className="px-4 py-2 whitespace-nowrap">
                             <div className="text-sm text-gray-900">
                               {activeTab === 'pembelian' ?
                                 (item.penjual?.nama || 'Penjual') :
@@ -777,10 +777,12 @@ const Dashboard = () => {
                               </div>
                             )}
                           </td>
-                          <td className="px-6 py-2 whitespace-nowrap">
-                            <div className="text-sm text-gray-500 mb-2">
+                          <td className="px-4 py-2 whitespace-nowrap">
+                            <div className="text-sm text-gray-500">
                               {formatDate(item.dibuatPada)}
                             </div>
+                          </td>
+                          <td className="px-4 py-2 whitespace-nowrap">
                             <div className="flex flex-wrap gap-1">
                               {/* Tombol Lihat Akun */}
                               {hasAccountData && validStatusForAccount && (
@@ -826,7 +828,7 @@ const Dashboard = () => {
                                 </button>
                               )}
 
-                              {/* Tombol Pembelaan (Penjual) */}
+                              {/* Tombol Pembelaan (Penjual) - Pindah ke kolom Aksi */}
                               {activeTab === 'penjualan' && item.status === 'SENGKETA' && (
                                 <button
                                   onClick={() => handleBuatSengketa(item)}
@@ -847,17 +849,16 @@ const Dashboard = () => {
                                   <BanknotesIcon className="h-3 w-3" />
                                 </button>
                               )}
+                              
+                              {/* Tombol Detail */}
+                              <button
+                                onClick={() => handleDetailClick(item)}
+                                className="inline-flex items-center px-2 py-1 border border-gray-300 text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50"
+                                title="Detail Transaksi"
+                              >
+                                <EyeIcon className="h-3 w-3" />
+                              </button>
                             </div>
-                          </td>
-                          <td className="px-6 py-2 whitespace-nowrap">
-                            <button
-                              onClick={() => handleDetailClick(item)}
-                              className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50"
-                              title="Detail Transaksi"
-                            >
-                              <EyeIcon className="h-4 w-4 mr-1" />
-                              Detail
-                            </button>
                           </td>
                         </tr>
                       );

@@ -2,14 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../konteks/AuthContext';
 import { useWallet } from '../../konteks/WalletContext';
 import { apiService } from '../../layanan/api';
-import { 
-  UserIcon, 
-  WalletIcon, 
-  ShieldCheckIcon, 
+import {
+  UserIcon,
+  WalletIcon,
+  ShieldCheckIcon,
   ExclamationTriangleIcon,
   PencilIcon,
   CheckIcon,
-  XMarkIcon
+  XMarkIcon,
+  InformationCircleIcon
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 
@@ -28,8 +29,8 @@ const Profil = () => {
     isConnecting 
   } = useWallet();
   const [isEditing, setIsEditing] = useState(false);
-  const [editData, setEditData] = useState({ 
-    nama: '', 
+  const [editData, setEditData] = useState({
+    nama: '',
     nomor_telepon: '',
     alamat: ''
   });
@@ -410,6 +411,26 @@ const Profil = () => {
               </div>
 
               <div className="p-6 space-y-6">
+                {/* Nama */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Nama Lengkap
+                  </label>
+                  <input
+                    type="text"
+                    name="nama"
+                    value={editData.nama}
+                    onChange={handleInputChange}
+                    disabled={!isEditing}
+                    className={`w-full px-3 py-2 border rounded-md ${
+                      isEditing
+                        ? 'border-gray-300 focus:ring-primary-500 focus:border-primary-500'
+                        : 'border-gray-300 bg-gray-50 text-gray-500'
+                    }`}
+                    placeholder="Masukkan nama lengkap"
+                  />
+                </div>
+
                 {/* Email (Read Only) */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -424,26 +445,6 @@ const Profil = () => {
                     />
                     <ShieldCheckIcon className="h-5 w-5 text-green-500" title="Terverifikasi" />
                   </div>
-                </div>
-
-                {/* Nama */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Nama Lengkap
-                  </label>
-                  <input
-                    type="text"
-                    name="nama"
-                    value={editData.nama}
-                    onChange={handleInputChange}
-                    disabled={!isEditing}
-                    className={`w-full px-3 py-2 border rounded-md ${
-                      isEditing 
-                        ? 'border-gray-300 focus:ring-primary-500 focus:border-primary-500' 
-                        : 'border-gray-300 bg-gray-50 text-gray-500'
-                    }`}
-                    placeholder="Masukkan nama lengkap"
-                  />
                 </div>
 
                 {/* Nomor Telepon */}
@@ -488,9 +489,25 @@ const Profil = () => {
 
                 {/* Wallet Address - Read Only */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Alamat Wallet
-                  </label>
+                  <div className="flex items-center space-x-2 mb-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Alamat Wallet
+                    </label>
+                    <div className="relative group">
+                      <InformationCircleIcon className="h-4 w-4 text-blue-500 cursor-help" />
+                      {/* Tooltip */}
+                      <div className="absolute left-1/2 transform -translate-x-1/2 bottom-full mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-10">
+                        <div className="space-y-1">
+                          <div className="font-medium">Informasi</div>
+                          <div>• Wallet permanen setelah terhubung</div>
+                          <div>• Tidak dapat diganti untuk keamanan</div>
+                          <div>• Gunakan dompet blockchain extension (MetaMask, OKX, Trust Wallet, dll)</div>
+                        </div>
+                        {/* Arrow */}
+                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                      </div>
+                    </div>
+                  </div>
                   {user?.walletAddress || user?.alamatWallet ? (
                     // Wallet sudah terhubung PERMANEN
                     <div className="space-y-2">
@@ -510,21 +527,13 @@ const Profil = () => {
                           </p>
                         </div>
                       </div>
-                      <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
-                        <p className="text-xs text-blue-800 font-medium">Kebijakan Wallet:</p>
-                        <ul className="text-xs text-blue-700 mt-1 space-y-1">
-                          <li>• Satu akun = Satu wallet selamanya</li>
-                          <li>• Wallet tidak dapat diganti atau diubah</li>
-                          <li>• Untuk keamanan dan mencegah penyalahgunaan</li>
-                          <li>• Pastikan selalu menggunakan wallet yang sama</li>
-                        </ul>
-                      </div>
+                      
                       {walletAddress && walletAddress !== (user.walletAddress || user.alamatWallet) && (
                         <div className="bg-orange-50 border border-orange-200 rounded-md p-3">
                           <p className="text-xs text-orange-800 font-medium">Peringatan:</p>
                           <p className="text-xs text-orange-700 mt-1">
-                            Wallet aktif di MetaMask ({walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}) 
-                            berbeda dengan wallet yang terdaftar di akun Anda. 
+                            Wallet aktif di MetaMask ({walletAddress.slice(0, 6)}...{walletAddress.slice(-4)})
+                            berbeda dengan wallet yang terdaftar di akun Anda.
                             Silakan ganti ke wallet yang benar di MetaMask.
                           </p>
                         </div>
@@ -539,10 +548,10 @@ const Profil = () => {
                         </div>
                         <div className="flex-1">
                           <p className="text-sm font-medium text-yellow-800">
-                            Wallet Belum Terhubung
+                            Dompet Blockchain Belum Terhubung
                           </p>
                           <p className="text-xs text-yellow-600">
-                            Hubungkan wallet untuk melakukan transaksi
+                            Hubungkan dompet blockchain extension untuk melakukan transaksi
                           </p>
                         </div>
                         <button
@@ -555,25 +564,6 @@ const Profil = () => {
                             {isConnecting ? 'Menghubungkan...' : 'Hubungkan'}
                           </span>
                         </button>
-                      </div>
-                      <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
-                        <p className="text-xs text-blue-800 font-medium">ℹ️ Informasi Wallet:</p>
-                        <ul className="text-xs text-blue-700 mt-1 space-y-1">
-                          <li>• Wallet yang dihubungkan akan menjadi wallet permanen</li>
-                          <li>• Pastikan Anda menggunakan wallet yang benar</li>
-                          <li>• Wallet tidak dapat diganti setelah terhubung</li>
-                          <li>• Untuk keamanan dan mencegah penyalahgunaan</li>
-                        </ul>
-                      </div>
-                      <div className="bg-green-50 border border-green-200 rounded-md p-3">
-                        <p className="text-xs text-green-800 font-medium">🦊 Cara Menghubungkan:</p>
-                        <ul className="text-xs text-green-700 mt-1 space-y-1">
-                          <li>• Pastikan MetaMask sudah terinstall di browser</li>
-                          <li>• Login ke akun MetaMask Anda</li>
-                          <li>• Klik tombol "Hubungkan" di atas</li>
-                          <li>• Setujui koneksi di popup MetaMask</li>
-                          <li>• Wallet akan langsung terkait dalam 1x proses</li>
-                        </ul>
                       </div>
                     </div>
                   )}

@@ -4,15 +4,28 @@ import { useAuth } from '../../konteks/AuthContext';
 import { apiService } from '../../layanan/api';
 import ImageUploadSimple from '../../komponen/ImageUploadSimple';
 import { getProductImageUrl, getAllProductImageUrls } from '../../utils/imageHelper';
+import { useEthPrice } from '../../hooks/useEthPrice';
 import {
   DevicePhoneMobileIcon,
-  ArrowLeftIcon
+  ArrowLeftIcon,
+  PhotoIcon,
+  ArrowPathIcon
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 const EditProduk = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const { user, isAuthenticated, loading: authLoading } = useAuth();
+  const {
+    ethToIdrRate,
+    convertEthToIdr,
+    convertIdrToEth,
+    formatIdrPrice,
+    isLoading: priceLoading,
+    refreshPrice,
+    lastUpdate,
+    source
+  } = useEthPrice();
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
   const [formData, setFormData] = useState({
@@ -25,6 +38,7 @@ const EditProduk = () => {
   });
   const [errors, setErrors] = useState({});
   const [hasUnsavedImages, setHasUnsavedImages] = useState(false);
+  const [currencyMode, setCurrencyMode] = useState('ETH'); // 'ETH' or 'IDR'
   // Redirect if not authenticated
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -107,6 +121,40 @@ const EditProduk = () => {
       }));
     }
   };
+
+  const convertCurrency = (value, fromMode, toMode) => {
+    if (!value || value === '') return '';
+    const numValue = parseFloat(value);
+    if (isNaN(numValue)) return '';
+    
+    if (fromMode === 'ETH' && toMode === 'IDR') {
+      return convertEthToIdr(numValue).toString();
+    } else if (fromMode === 'IDR' && toMode === 'ETH') {
+      return convertIdrToEth(numValue).toFixed(6);
+    }
+    return value;
+  };
+
+  const handleCurrencyToggle = () => {
+    const newMode = currencyMode === 'ETH' ? 'IDR' : 'ETH';
+    const convertedValue = convertCurrency(formData.hargaEth, currencyMode, newMode);
+    
+    setCurrencyMode(newMode);
+    setFormData(prev => ({
+      ...prev,
+      hargaEth: convertedValue
+    }));
+  };
+
+  const formatRupiah = (amount) => {
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount);
+  };
+
   const validateForm = () => {
     const newErrors = {};
     if (!formData.judulProduk.trim()) {
@@ -116,11 +164,24 @@ const EditProduk = () => {
       newErrors.namaGame = 'Nama game wajib diisi';
     }
     if (!formData.hargaEth) {
-      newErrors.hargaEth = 'Harga ETH wajib diisi';
-    } else if (parseFloat(formData.hargaEth) < 0.001) {
-      newErrors.hargaEth = 'Harga minimal 0.001 ETH';
-    } else if (parseFloat(formData.hargaEth) > 10) {
-      newErrors.hargaEth = 'Harga maksimal 10 ETH';
+      newErrors.hargaEth = 'Harga wajib diisi';
+    } else {
+      const hargaValue = parseFloat(formData.hargaEth);
+      if (currencyMode === 'ETH') {
+        if (hargaValue < 0.001) {
+          newErrors.hargaEth = 'Harga minimal 0.001 ETH';
+        } else if (hargaValue > 10) {
+          newErrors.hargaEth = 'Harga maksimal 10 ETH';
+        }
+      } else { // IDR mode
+        const minIdr = Math.round(0.001 * ethToIdrRate);
+        const maxIdr = Math.round(10 * ethToIdrRate);
+        if (hargaValue < minIdr) {
+          newErrors.hargaEth = `Harga minimal ${formatIdrPrice(minIdr)}`;
+        } else if (hargaValue > maxIdr) {
+          newErrors.hargaEth = `Harga maksimal ${formatIdrPrice(maxIdr)}`;
+        }
+      }
     }
     if (!formData.deskripsi.trim()) {
       newErrors.deskripsi = 'Deskripsi wajib diisi';
@@ -150,11 +211,17 @@ const EditProduk = () => {
         }
       }
 
+      // Convert to ETH if currently in IDR mode
+      let hargaEthValue = formData.hargaEth;
+      if (currencyMode === 'IDR') {
+        hargaEthValue = convertCurrency(formData.hargaEth, 'IDR', 'ETH');
+      }
+
       const response = await apiService.produk.updateProduk(id, {
         judulProduk: formData.judulProduk.trim(),
         namaGame: formData.namaGame.trim(),
         deskripsi: formData.deskripsi.trim(),
-        hargaEth: parseFloat(formData.hargaEth),
+        hargaEth: parseFloat(hargaEthValue),
         gambar: gambarData,
         statusJual: formData.statusJual
       });
@@ -192,44 +259,35 @@ const EditProduk = () => {
     return null;
   }
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mb-8">
-          <button
-            onClick={() => {
-              if (hasUnsavedImages) {
-                if (window.confirm('Anda memiliki perubahan gambar yang belum disimpan. Yakin ingin meninggalkan halaman?')) {
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-6">
+          {/* Header */}
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-xl font-semibold text-gray-900">
+              Edit Produk
+            </h3>
+            <button
+              onClick={() => {
+                if (hasUnsavedImages) {
+                  if (window.confirm('Anda memiliki perubahan gambar yang belum disimpan. Yakin ingin meninggalkan halaman?')) {
+                    navigate('/produk-saya');
+                  }
+                } else {
                   navigate('/produk-saya');
                 }
-              } else {
-                navigate('/produk-saya');
-              }
-            }}
-            className="inline-flex items-center text-blue-600 hover:text-blue-800 mb-4"
-          >
-            <ArrowLeftIcon className="h-5 w-5 mr-2" />
-            Kembali ke Produk Saya
-          </button>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Edit Produk</h1>
-          <p className="text-gray-600">Perbarui informasi produk Anda</p>
-        </div>
-        {/* Form */}
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Status Produk */}
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                name="statusJual"
-                checked={formData.statusJual}
-                onChange={handleInputChange}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <label className="ml-2 block text-sm text-gray-900">
-                Produk aktif untuk dijual
-              </label>
-            </div>
+              }}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Form Fields */}
+            <div className="lg:col-span-2 space-y-6">
             {/* Judul Produk */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -272,17 +330,23 @@ const EditProduk = () => {
                 Harga dalam ETH *
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <span className="text-gray-500 sm:text-sm">ETH</span>
-                </div>
+                <button
+                  type="button"
+                  onClick={handleCurrencyToggle}
+                  className="absolute inset-y-0 left-0 pl-3 flex items-center hover:bg-gray-100 rounded-l-md transition-colors"
+                >
+                  <span className="text-gray-500 sm:text-sm font-medium">
+                    {currencyMode}
+                  </span>
+                </button>
                 <input
                   type="number"
                   name="hargaEth"
                   value={formData.hargaEth}
                   onChange={handleInputChange}
-                  step="0.001"
-                  min="0.001"
-                  max="10"
+                  step={currencyMode === 'ETH' ? '0.001' : '1000'}
+                  min={currencyMode === 'ETH' ? '0.001' : Math.round(0.001 * ethToIdrRate)}
+                  max={currencyMode === 'ETH' ? '10' : Math.round(10 * ethToIdrRate)}
                   className={`w-full pl-12 pr-3 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500 ${
                     errors.hargaEth ? 'border-red-300' : 'border-gray-300'
                   }`}
@@ -354,8 +418,146 @@ const EditProduk = () => {
                 {formData.deskripsi.length}/500 karakter
               </p>
             </div>
+            </div>
+
+            {/* Sidebar Preview */}
+            <div className="lg:col-span-1">
+              <div className="bg-gray-50 rounded-lg p-4 sticky top-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="text-lg font-semibold text-gray-900">Preview Produk</h4>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={refreshPrice}
+                      disabled={priceLoading}
+                      className="p-1 text-gray-500 hover:text-gray-700 disabled:opacity-50"
+                      title="Refresh harga ETH"
+                    >
+                      <ArrowPathIcon className={`h-4 w-4 ${priceLoading ? 'animate-spin' : ''}`} />
+                    </button>
+                    <div className="text-xs text-gray-500">
+                      {source && `${source}`}
+                    </div>
+                  </div>
+                </div>
+                {/* Price Info */}
+                <div className="mb-3 p-2 bg-blue-50 rounded-md">
+                  <div className="text-xs text-blue-600 font-medium">
+                    1 ETH = {formatIdrPrice(ethToIdrRate)}
+                  </div>
+                  {lastUpdate && (
+                    <div className="text-xs text-blue-500">
+                      Update: {new Date(lastUpdate).toLocaleTimeString('id-ID')}
+                    </div>
+                  )}
+                </div>
+                <div className="border rounded-lg p-4 bg-white">
+                  {/* Preview Image */}
+                  <div className="w-full h-32 bg-gray-200 rounded-md mb-3 flex items-center justify-center">
+                    {(() => {
+                      let imageUrl = null;
+                      if (Array.isArray(formData.gambar) && formData.gambar.length > 0) {
+                        imageUrl = formData.gambar[0];
+                      } else if (typeof formData.gambar === 'string' && formData.gambar.trim()) {
+                        try {
+                          const parsed = JSON.parse(formData.gambar);
+                          if (Array.isArray(parsed) && parsed.length > 0) {
+                            imageUrl = parsed[0];
+                          } else {
+                            imageUrl = formData.gambar;
+                          }
+                        } catch (e) {
+                          imageUrl = formData.gambar;
+                        }
+                      }
+                      
+                      return imageUrl ? (
+                        <img
+                          src={imageUrl}
+                          alt="Preview"
+                          className="w-full h-full object-cover rounded-md"
+                        />
+                      ) : (
+                        <PhotoIcon className="h-8 w-8 text-gray-400" />
+                      );
+                    })()}
+                  </div>
+                  {/* Show image count if multiple images */}
+                  {(() => {
+                    let imageCount = 0;
+                    if (Array.isArray(formData.gambar)) {
+                      imageCount = formData.gambar.length;
+                    } else if (typeof formData.gambar === 'string' && formData.gambar.trim()) {
+                      try {
+                        const parsed = JSON.parse(formData.gambar);
+                        if (Array.isArray(parsed)) {
+                          imageCount = parsed.length;
+                        } else {
+                          imageCount = 1;
+                        }
+                      } catch (e) {
+                        imageCount = 1;
+                      }
+                    }
+                    
+                    return imageCount > 1 ? (
+                      <div className="text-xs text-gray-500 text-center mb-2">
+                        +{imageCount - 1} gambar lainnya
+                      </div>
+                    ) : null;
+                  })()}
+                  {/* Preview Content */}
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium text-gray-900">
+                      {formData.judulProduk || 'Judul Produk Anda'}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {formData.namaGame || 'Nama Game'}
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <div className="text-lg font-bold text-blue-600">
+                          {(() => {
+                            console.log('🔍 Preview Debug:', {
+                              currencyMode,
+                              hargaEth: formData.hargaEth,
+                              parsedValue: parseFloat(formData.hargaEth)
+                            });
+                            
+                            if (formData.hargaEth) {
+                              if (currencyMode === 'ETH') {
+                                return `${formData.hargaEth} ETH`;
+                              } else {
+                                return formatRupiah(parseFloat(formData.hargaEth));
+                              }
+                            } else {
+                              return currencyMode === 'ETH' ? '0.000 ETH' : formatRupiah(0);
+                            }
+                          })()}
+                        </div>
+                        {formData.hargaEth && currencyMode === 'ETH' && (
+                          <div className="text-xs text-gray-500">
+                            ≈ {formatIdrPrice(convertEthToIdr(parseFloat(formData.hargaEth)))}
+                          </div>
+                        )}
+                        {formData.hargaEth && currencyMode === 'IDR' && (
+                          <div className="text-xs text-gray-500">
+                            ≈ {convertIdrToEth(parseFloat(formData.hargaEth)).toFixed(6)} ETH
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    {formData.deskripsi && (
+                      <div className="text-xs text-gray-600 mt-2 line-clamp-3">
+                        {formData.deskripsi.substring(0, 100)}...
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Submit Button */}
-            <div className="flex justify-end space-x-4">
+            <div className="lg:col-span-3 flex justify-end space-x-4 pt-6 border-t">
               <button
                 type="button"
                 onClick={() => {

@@ -116,7 +116,6 @@ const ModalDetailSengketa = ({ isOpen, onClose, transaksi }) => {
         <div className="flex justify-between items-center p-6 border-b border-gray-200">
           <div>
             <h2 className="text-2xl font-bold text-gray-900 flex items-center">
-              <ExclamationTriangleIcon className="h-6 w-6 text-red-600 mr-2" />
               Detail Sengketa
             </h2>
             <p className="text-sm text-gray-600 mt-1">
@@ -166,12 +165,12 @@ const ModalDetailSengketa = ({ isOpen, onClose, transaksi }) => {
                   </div>
                   <div className="text-right text-sm text-gray-600">
                     <div className="flex items-center">
-                      <CalendarIcon className="h-4 w-4 mr-1" />
+                      <CalendarIcon className="h-4 w-4 mr-1 text-gray-500" />
                       Dibuat: {formatDate(sengketaDetail.dibuatPada)}
                     </div>
                     {sengketaDetail.resolvedAt && (
                       <div className="flex items-center mt-1">
-                        <CheckCircleIcon className="h-4 w-4 mr-1" />
+                        <CheckCircleIcon className="h-4 w-4 mr-1 text-gray-500" />
                         Diselesaikan: {formatDate(sengketaDetail.resolvedAt)}
                       </div>
                     )}
@@ -179,7 +178,7 @@ const ModalDetailSengketa = ({ isOpen, onClose, transaksi }) => {
                 </div>
               </div>
               {/* Informasi Transaksi */}
-              <div className="bg-blue-50 rounded-lg p-4">
+              <div className="bg-gray-50 rounded-lg p-4">
                 <h3 className="text-lg font-semibold text-gray-900 mb-3">Informasi Transaksi</h3>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
@@ -224,7 +223,7 @@ const ModalDetailSengketa = ({ isOpen, onClose, transaksi }) => {
                 {sengketaDetail.deskripsi && (
                   <div className="bg-white border border-gray-200 rounded-lg p-4">
                     <h4 className="font-medium text-gray-900 mb-2 flex items-center">
-                      <UserIcon className="h-4 w-4 mr-2 text-blue-600" />
+                      <UserIcon className="h-4 w-4 mr-2 text-gray-600" />
                       Keluhan Pembeli
                     </h4>
                     <p className="text-gray-700 whitespace-pre-wrap">{sengketaDetail.deskripsi}</p>
@@ -234,7 +233,7 @@ const ModalDetailSengketa = ({ isOpen, onClose, transaksi }) => {
                 {sengketaDetail.pembeliBukti && (
                   <div className="bg-white border border-gray-200 rounded-lg p-4">
                     <h4 className="font-medium text-gray-900 mb-3 flex items-center">
-                      <PhotoIcon className="h-4 w-4 mr-2 text-blue-600" />
+                      <PhotoIcon className="h-4 w-4 mr-2 text-gray-600" />
                       Bukti dari Pembeli
                     </h4>
                     <div className="flex items-center space-x-4">
@@ -259,7 +258,7 @@ const ModalDetailSengketa = ({ isOpen, onClose, transaksi }) => {
                 {sengketaDetail.penjualBukti && (
                   <div className="bg-white border border-gray-200 rounded-lg p-4">
                     <h4 className="font-medium text-gray-900 mb-3 flex items-center">
-                      <PhotoIcon className="h-4 w-4 mr-2 text-green-600" />
+                      <PhotoIcon className="h-4 w-4 mr-2 text-gray-600" />
                       Bukti dari Penjual
                     </h4>
                     <div className="flex items-center space-x-4">
@@ -284,7 +283,7 @@ const ModalDetailSengketa = ({ isOpen, onClose, transaksi }) => {
                 {sengketaDetail.resolution && (
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                     <h4 className="font-medium text-green-900 mb-2 flex items-center">
-                      <CheckCircleIcon className="h-4 w-4 mr-2" />
+                      <CheckCircleIcon className="h-4 w-4 mr-2 text-green-600" />
                       Keputusan Admin
                     </h4>
                     <p className="text-green-800 whitespace-pre-wrap">{sengketaDetail.resolution}</p>

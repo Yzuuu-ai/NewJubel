@@ -168,6 +168,9 @@ export const AuthProvider = ({ children }) => {
       // Continue with logout even if API call fails
       console.error('Error during logout:', error);
     } finally {
+      // Set flag untuk mencegah toast error dari AdminRoute
+      localStorage.setItem('justLoggedOut', 'true');
+      
       // Clear storage (consistent with localStorage)
       localStorage.removeItem('authToken');
       localStorage.removeItem('user');
@@ -176,6 +179,11 @@ export const AuthProvider = ({ children }) => {
       setUser(null);
       setIsAuthenticated(false);
       toast.success('Logout berhasil');
+      
+      // Clear flag setelah delay
+      setTimeout(() => {
+        localStorage.removeItem('justLoggedOut');
+      }, 1000);
     }
   };
 

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../konteks/AuthContext';
 import { EyeIcon, EyeSlashIcon, ArrowLeftIcon } from '@heroicons/react/24/outline';
 const Masuk = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login, loading, isAuthenticated, user } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
@@ -72,11 +73,12 @@ const Masuk = () => {
         <div className="flex justify-start">
           <button
             onClick={() => {
-              // Check if there's a previous page in history
-              if (window.history.length > 1) {
-                navigate(-1);
+              // Cek apakah ada informasi dari mana user datang
+              const from = location.state?.from;
+              if (from === '/daftar') {
+                navigate('/daftar');
               } else {
-                // Fallback to homepage if no history
+                // Default ke beranda jika tidak ada info atau dari beranda
                 navigate('/beranda');
               }
             }}
@@ -183,6 +185,7 @@ const Masuk = () => {
               Belum punya akun?{' '}
               <Link
                 to="/daftar"
+                state={{ from: '/masuk' }}
                 className="font-medium text-primary-600 hover:text-primary-500 transition-colors"
               >
                 Daftar sekarang

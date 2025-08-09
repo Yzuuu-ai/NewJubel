@@ -73,16 +73,13 @@ const ModalSengketaPenjual = ({ isOpen, onClose, onSubmit, loading, transaksi })
         <div className="p-6">
           {/* Header */}
           <div className="flex justify-between items-center mb-6">
-            <div className="flex items-center space-x-3">
-              <ShieldCheckIcon className="h-8 w-8 text-blue-600" />
-              <div>
-                <h3 className="text-xl font-semibold text-gray-900">
-                  Buat Pembelaan Sengketa
-                </h3>
-                <p className="text-sm text-gray-500">
-                  {transaksi.produk?.judulProduk} - {transaksi.kodeTransaksi}
-                </p>
-              </div>
+            <div>
+              <h3 className="text-xl font-semibold text-gray-900">
+                Buat Pembelaan Sengketa
+              </h3>
+              <p className="text-sm text-gray-500">
+                {transaksi.produk?.judulProduk} - {transaksi.kodeTransaksi}
+              </p>
             </div>
             <button
               onClick={handleClose}
@@ -92,54 +89,11 @@ const ModalSengketaPenjual = ({ isOpen, onClose, onSubmit, loading, transaksi })
             </button>
           </div>
           
-          {/* Informasi Sengketa dari Pembeli */}
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-            <h4 className="font-medium text-red-900 mb-3 flex items-center">
-              <ExclamationTriangleIcon className="h-5 w-5 mr-2" />
-              Sengketa dari Pembeli
-            </h4>
-            <div className="space-y-2">
-              <div>
-                <p className="text-sm font-medium text-red-800">Pembeli:</p>
-                <p className="text-sm text-red-700">{transaksi.pembeli?.nama}</p>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-red-800">Alasan Sengketa:</p>
-                <p className="text-sm text-red-700 bg-red-100 p-2 rounded">
-                  {sengketa.alasan || sengketa.deskripsi || 'Tidak ada alasan yang diberikan'}
-                </p>
-              </div>
-              {sengketa.bukti && sengketa.bukti.length > 0 && (
-                <div>
-                  <p className="text-sm font-medium text-red-800">Bukti Pembeli:</p>
-                  <div className="space-y-1">
-                    {sengketa.bukti.map((buktiItem, index) => (
-                      <div key={index} className="text-sm text-red-700 bg-red-100 p-2 rounded">
-                        {buktiItem.includes('http') ? (
-                          <a 
-                            href={buktiItem} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="text-red-700 hover:text-red-900 underline flex items-center"
-                          >
-                            <PhotoIcon className="h-4 w-4 mr-1" />
-                            Lihat Bukti {index + 1}
-                          </a>
-                        ) : (
-                          buktiItem
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-          
           {/* Form Pembelaan */}
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Pembelaan */}
-            <div>`n              <label className="block text-sm font-medium text-gray-700 mb-2">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 <DocumentTextIcon className="h-4 w-4 inline mr-1" />
                 Pembelaan Anda *
               </label>
@@ -163,7 +117,7 @@ const ModalSengketaPenjual = ({ isOpen, onClose, onSubmit, loading, transaksi })
                 Upload Bukti Tambahan (Opsional)
               </label>
               <ImageUpload
-                maxFiles={5} // Changed from 1 to 5 for multiple images
+                maxFiles={5}
                 currentImages={bukti}
                 onUploadStart={handleUploadStart}
                 onUploadSuccess={handleUploadSuccess}
@@ -187,17 +141,6 @@ const ModalSengketaPenjual = ({ isOpen, onClose, onSubmit, loading, transaksi })
                   {bukti.length} gambar berhasil diupload
                 </p>
               )}
-              
-              {/* Tips upload gambar */}
-              <div className="mt-2 text-xs text-gray-500">
-                <p className="font-medium mb-1">Tips upload gambar:</p>
-                <ul className="list-disc list-inside space-y-1">
-                  <li>Gunakan gambar berkualitas tinggi untuk memperjelas pembelaan</li>
-                  <li>Screenshot yang jelas menunjukkan bukti pembelaan</li>
-                  <li>Hindari gambar yang blur atau gelap</li>
-                  <li>Maksimal 5 gambar, masing-masing hingga 5MB</li>
-                </ul>
-              </div>
             </div>
             
             {/* Error Message */}
@@ -212,19 +155,6 @@ const ModalSengketaPenjual = ({ isOpen, onClose, onSubmit, loading, transaksi })
               </div>
             )}
             
-            {/* Peringatan */}
-            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
-              <div className="flex">
-                <ExclamationTriangleIcon className="h-5 w-5 text-yellow-400" />
-                <div className="ml-3">
-                  <h4 className="text-sm font-medium text-yellow-800">Penting!</h4>
-                  <p className="text-sm text-yellow-700 mt-1">
-                    Pembelaan ini akan dikirim ke admin untuk ditinjau bersama dengan sengketa pembeli. 
-                    Pastikan pembelaan Anda jujur dan didukung dengan bukti yang valid.
-                  </p>
-                </div>
-              </div>
-            </div>
             
             {/* Action Buttons */}
             <div className="flex space-x-3 pt-4">

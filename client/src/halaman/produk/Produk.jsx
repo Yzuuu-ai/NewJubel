@@ -5,9 +5,10 @@ import { useWallet } from '../../konteks/WalletContext';
 import { apiService } from '../../layanan/api';
 import LineClamp from '../../komponen/LineClamp';
 import { useMarketplaceUpdates } from '../../hooks/useRealTimeUpdates';
+import { useEthToIdrRate } from '../../hooks/useEthPrice';
 import TransactionDetailModal from '../../komponen/TransactionDetailModal';
 import PembelianKontrakPintar from '../../komponen/PembelianKontrakPintar';
-import { 
+import {
   MagnifyingGlassIcon,
   FunnelIcon,
   DevicePhoneMobileIcon,
@@ -28,6 +29,7 @@ const Produk = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
   const { isConnected, walletAddress, balance } = useWallet();
+  const { rate: ethToIdrRate } = useEthToIdrRate();
   const [produk, setProduk] = useState([]);
   const [gamePopuler, setGamePopuler] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -811,14 +813,14 @@ const Produk = () => {
                 <p className="text-gray-500 mb-4">Coba ubah filter atau kata kunci pencarian</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 mb-6">
                 {produk.map((item) => (
                   <div
                     key={item.id}
                     onClick={() => openModal(item)}
                     className="bg-white rounded-lg shadow-md hover:shadow-md transition-shadow overflow-hidden group cursor-pointer"
                   >
-                    <div className="relative h-48 bg-gray-100">
+                    <div className="relative h-40 bg-gray-100">
                       {(() => {
                         // Handle both array and string format for images
                         let imageUrl = null;
@@ -884,21 +886,20 @@ const Produk = () => {
                         <span className="text-sm text-gray-400">Tidak ada gambar</span>
                       </div>
                     </div>
-                    <div className="p-4">
-                      <div className="flex items-center text-sm text-gray-500 mb-2">
-                        <DevicePhoneMobileIcon className="h-4 w-4 mr-1" />
+                    <div className="p-3">
+                      <div className="flex items-center text-xs text-gray-500 mb-1">
                         <span>{item.namaGame}</span>
                       </div>
-                      <LineClamp lines={2} className="font-semibold text-gray-900 mb-3 group-hover:text-primary-600 transition-colors">
+                      <LineClamp lines={2} className="font-semibold text-gray-900 mb-2 group-hover:text-primary-600 transition-colors text-sm">
                         {item.judulProduk}
                       </LineClamp>
-                      <div className="flex justify-between items-center">
+                      <div className="flex justify-between items-center mb-2">
                         <div>
-                          <div className="text-lg font-bold text-primary-600">
+                          <div className="text-base font-bold text-primary-600">
                             {item.hargaEth ? `${item.hargaEth} ETH` : 'N/A'}
                           </div>
-                          <div className="text-xs text-gray-500 mt-1">
-                            ≈ {formatRupiah(item.harga || 0)}
+                          <div className="text-xs text-gray-500">
+                            ≈ {formatRupiah((item.hargaEth || 0) * ethToIdrRate)}
                           </div>
                         </div>
                         <div className="text-xs text-gray-500 flex items-center">
@@ -906,8 +907,8 @@ const Produk = () => {
                           {formatTanggal(item.dibuatPada || new Date().toISOString())}
                         </div>
                       </div>
-                      <div className="mt-3 pt-3 border-t border-gray-100 flex items-center text-sm text-gray-500">
-                        <UserIcon className="h-4 w-4 mr-1" />
+                      <div className="pt-2 border-t border-gray-100 flex items-center text-xs text-gray-500">
+                        <UserIcon className="h-3 w-3 mr-1" />
                         <span>Oleh {item.penjual?.nama || 'Penjual'}</span>
                       </div>
                     </div>
@@ -1249,7 +1250,7 @@ const Produk = () => {
                             </span>
                           </div>
                           <div className="text-right text-gray-600">
-                            {formatRupiah(selectedProduct.harga || 2000000)}
+                            ≈ {formatRupiah((selectedProduct.hargaEth || 0) * ethToIdrRate)}
                           </div>
                         </div>
                         {/* Action Buttons - tetap di bawah */}

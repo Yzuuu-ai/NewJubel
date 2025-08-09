@@ -276,6 +276,7 @@ const Navbar = () => {
                 </Link>
                 <Link
                   to="/daftar"
+                  state={{ from: '/beranda' }}
                   className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 text-sm font-medium rounded-md"
                 >
                   Daftar
@@ -372,6 +373,7 @@ const Navbar = () => {
                 </Link>
                 <Link
                   to="/daftar"
+                  state={{ from: '/beranda' }}
                   onClick={() => setMobileMenuOpen(false)}
                   className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 text-base font-medium rounded-md transition-colors"
                 >

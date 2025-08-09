@@ -146,9 +146,9 @@ const ImageUpload = ({
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
-        className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
-          dragOver 
-            ? 'border-primary-500 bg-primary-50' 
+        className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors ${
+          dragOver
+            ? 'border-primary-500 bg-primary-50'
             : 'border-gray-300 hover:border-gray-400'
         } ${uploading ? 'opacity-50 pointer-events-none' : ''}`}
       >
@@ -162,39 +162,27 @@ const ImageUpload = ({
         />
         {uploading ? (
           <div className="flex flex-col items-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mb-2"></div>
-            <p className="text-sm text-gray-600">Mengupload gambar...</p>
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600 mb-2"></div>
+            <p className="text-xs text-gray-600">Mengupload gambar...</p>
           </div>
         ) : (
           <div className="flex flex-col items-center">
-            <CloudArrowUpIcon className="h-12 w-12 text-gray-400 mb-3" />
-            <p className="text-sm font-medium text-gray-900 mb-1">
+            <CloudArrowUpIcon className="h-8 w-8 text-gray-400 mb-2" />
+            <p className="text-xs font-medium text-gray-900 mb-1">
               Klik untuk upload atau drag & drop
             </p>
-            <p className="text-xs text-gray-500 mb-3">
+            <p className="text-xs text-gray-500 mb-2">
               PNG, JPG, GIF, WebP hingga 5MB
               {maxFiles > 1 && ` (Maksimal ${maxFiles} file)`}
             </p>
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="bg-primary-600 text-white px-4 py-2 rounded-md hover:bg-primary-700 transition-colors text-sm"
+              className="bg-primary-600 text-white px-3 py-1.5 rounded-md hover:bg-primary-700 transition-colors text-xs"
             >
               Pilih Gambar
             </button>
           </div>
         )}
-      </div>
-      {/* Info */}
-      <div className="mt-3 flex items-start space-x-2 text-xs text-gray-500">
-        <ExclamationTriangleIcon className="h-4 w-4 text-yellow-500 flex-shrink-0 mt-0.5" />
-        <div>
-          <p>Tips upload gambar:</p>
-          <ul className="list-disc list-inside mt-1 space-y-1">
-            <li>Gunakan gambar berkualitas tinggi untuk menarik pembeli</li>
-            <li>Screenshot yang jelas menunjukkan detail akun</li>
-            <li>Hindari gambar yang blur atau gelap</li>
-          </ul>
-        </div>
       </div>
     </div>
   );

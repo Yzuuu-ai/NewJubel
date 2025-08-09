@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../konteks/AuthContext';
 import { apiService } from '../../layanan/api';
-import { 
+import {
   PencilIcon,
   TrashIcon,
   EyeIcon,
@@ -21,16 +21,44 @@ import {
 import LineClamp from '../../komponen/LineClamp';
 import ImageUploadSimple from '../../komponen/ImageUploadSimple';
 import { broadcastMarketplaceUpdate, broadcastProductCreated } from '../../hooks/useRealTimeUpdates';
+import { useCurrencyConverter } from '../../hooks/useEthPrice';
 import toast from 'react-hot-toast';
 
 const ProdukSaya = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated, loading: authLoading } = useAuth();
+  
+  // Currency converter hook
+  const {
+    rate: ethToIdrRate,
+    convertEthToIdr,
+    convertIdrToEth,
+    formatEthPrice,
+    formatIdrPrice,
+    isLoading: priceLoading,
+    error: priceError
+  } = useCurrencyConverter();
+  
   const [produk, setProduk] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('semua'); // semua, aktif, terjual
   const [showAddModal, setShowAddModal] = useState(false);
   const [addLoading, setAddLoading] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editProduk, setEditProduk] = useState(null);
+  const [editFormData, setEditFormData] = useState({
+    judulProduk: '',
+    namaGame: '',
+    deskripsi: '',
+    hargaEth: '',
+    gambar: [],
+    statusJual: true
+  });
+  const [editErrors, setEditErrors] = useState({});
+  const [hasUnsavedEditImages, setHasUnsavedEditImages] = useState(false);
+  const [currencyMode, setCurrencyMode] = useState('ETH'); // 'ETH' or 'IDR'
+  const [editCurrencyMode, setEditCurrencyMode] = useState('ETH'); // for edit modal
   const [gamePopuler, setGamePopuler] = useState([]);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedProduk, setSelectedProduk] = useState(null);
@@ -114,7 +142,7 @@ Highlight:
       loadGamePopuler();
       loadSuggestedPrices();
     }
-  }, [isAuthenticated, authLoading, user]);
+  }, [isAuthenticated, authLoading, user, ethToIdrRate, formatIdrPrice]);
 
   const loadProdukSaya = async () => {
     try {
@@ -153,14 +181,15 @@ Highlight:
 
   const loadSuggestedPrices = async () => {
     try {
-      // Set default price suggestions
+      // Set price suggestions using real-time rate
+      const currentRate = ethToIdrRate || 68300000;
       setPriceInfo({
         idrAmount: 0,
-        rates: { ethToIdr: 50000000 },
+        rates: { ethToIdr: currentRate },
         suggestions: [
-            { eth: '0.001', idrFormatted: 'Rp 50.000', label: 'Murah' },
-            { eth: '0.005', idrFormatted: 'Rp 250.000', label: 'Sedang' },
-            { eth: '0.01', idrFormatted: 'Rp 500.000', label: 'Mahal' }
+            { eth: '0.001', idrFormatted: formatIdrPrice(0.001 * currentRate), label: 'Murah' },
+            { eth: '0.005', idrFormatted: formatIdrPrice(0.005 * currentRate), label: 'Sedang' },
+            { eth: '0.01', idrFormatted: formatIdrPrice(0.01 * currentRate), label: 'Mahal' }
         ]
       });
     } catch (error) {
@@ -169,18 +198,16 @@ Highlight:
   };
 
   // Konversi ETH ke IDR saat user mengetik
-  const convertEthToIdr = async (ethAmount) => {
+  const handleEthToIdrConversion = async (ethAmount) => {
     if (!ethAmount || parseFloat(ethAmount) <= 0) {
       setPriceInfo(prev => ({ ...prev, idrAmount: 0 }));
       return;
     }
     try {
-      // Temporary conversion - should be implemented in backend
-      const ethToIdrRate = 50000000; // Approximate rate
-      const idrAmount = parseFloat(ethAmount) * ethToIdrRate;
-      setPriceInfo(prev => ({ 
-        ...prev, 
-        idrAmount: idrAmount 
+      const idrAmount = convertEthToIdr(parseFloat(ethAmount));
+      setPriceInfo(prev => ({
+        ...prev,
+        idrAmount: idrAmount
       }));
     } catch (error) {
       console.error('Error converting ETH to IDR:', error);
@@ -199,6 +226,148 @@ Highlight:
         ...prev,
         [name]: ''
       }));
+    }
+  };
+
+  const convertCurrency = (value, fromMode, toMode) => {
+    if (!value || value === '') return '';
+    const numValue = parseFloat(value);
+    if (isNaN(numValue)) return '';
+    
+    if (fromMode === 'ETH' && toMode === 'IDR') {
+      return convertEthToIdr(numValue).toString();
+    } else if (fromMode === 'IDR' && toMode === 'ETH') {
+      return convertIdrToEth(numValue).toFixed(6);
+    }
+    return value;
+  };
+
+  const handleCurrencyToggle = (currentMode, setMode, currentValue, setFormData, fieldName) => {
+    const newMode = currentMode === 'ETH' ? 'IDR' : 'ETH';
+    const convertedValue = convertCurrency(currentValue, currentMode, newMode);
+    
+    setMode(newMode);
+    setFormData(prev => ({
+      ...prev,
+      [fieldName]: convertedValue
+    }));
+  };
+
+  const handleEditInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setEditFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+    // Clear error when user starts typing
+    if (editErrors[name]) {
+      setEditErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }));
+    }
+  };
+
+  const validateEditForm = () => {
+    const newErrors = {};
+    if (!editFormData.judulProduk.trim()) {
+      newErrors.judulProduk = 'Judul produk wajib diisi';
+    }
+    if (!editFormData.namaGame.trim()) {
+      newErrors.namaGame = 'Nama game wajib diisi';
+    }
+    if (!editFormData.hargaEth) {
+      newErrors.hargaEth = 'Harga wajib diisi';
+    } else {
+      const hargaValue = parseFloat(editFormData.hargaEth);
+      if (editCurrencyMode === 'ETH') {
+        if (hargaValue < 0.001) {
+          newErrors.hargaEth = 'Harga minimal 0.001 ETH';
+        } else if (hargaValue > 10) {
+          newErrors.hargaEth = 'Harga maksimal 10 ETH';
+        }
+      } else { // IDR mode
+        const currentRate = ethToIdrRate || 68300000;
+        const minIdr = Math.round(0.001 * currentRate);
+        const maxIdr = Math.round(10 * currentRate);
+        if (hargaValue < minIdr) {
+          newErrors.hargaEth = `Harga minimal ${formatIdrPrice(minIdr)}`;
+        } else if (hargaValue > maxIdr) {
+          newErrors.hargaEth = `Harga maksimal ${formatIdrPrice(maxIdr)}`;
+        }
+      }
+    }
+    if (!editFormData.deskripsi.trim()) {
+      newErrors.deskripsi = 'Deskripsi wajib diisi';
+    } else if (editFormData.deskripsi.length > 500) {
+      newErrors.deskripsi = 'Deskripsi maksimal 500 karakter';
+    }
+    setEditErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleEditProduct = async (e) => {
+    e.preventDefault();
+    if (!validateEditForm()) {
+      toast.error('Mohon lengkapi semua field yang wajib diisi');
+      return;
+    }
+
+    try {
+      setEditLoading(true);
+      
+      // Prepare image data for submission
+      let gambarData = null;
+      if (editFormData.gambar) {
+        if (Array.isArray(editFormData.gambar)) {
+          gambarData = editFormData.gambar.length > 0 ? editFormData.gambar : null;
+        } else {
+          gambarData = [editFormData.gambar];
+        }
+      }
+
+      // Convert to ETH if currently in IDR mode
+      let hargaEthValue = editFormData.hargaEth;
+      if (editCurrencyMode === 'IDR') {
+        hargaEthValue = convertCurrency(editFormData.hargaEth, 'IDR', 'ETH');
+      }
+
+      const response = await apiService.produk.updateProduk(editProduk.id, {
+        judulProduk: editFormData.judulProduk.trim(),
+        namaGame: editFormData.namaGame.trim(),
+        deskripsi: editFormData.deskripsi.trim(),
+        hargaEth: parseFloat(hargaEthValue),
+        gambar: gambarData,
+        statusJual: editFormData.statusJual
+      });
+
+      if (response.data.sukses) {
+        setHasUnsavedEditImages(false);
+        toast.success('Produk berhasil diperbarui!');
+        setShowEditModal(false);
+        setEditProduk(null);
+        
+        // Reset form
+        setEditFormData({
+          judulProduk: '',
+          namaGame: '',
+          deskripsi: '',
+          hargaEth: '',
+          gambar: [],
+          statusJual: true
+        });
+        
+        // Reload produk list
+        loadProdukSaya();
+      } else {
+        toast.error(response.data.pesan || 'Gagal memperbarui produk');
+      }
+    } catch (error) {
+      console.error('Error updating product:', error);
+      const errorMessage = error.response?.data?.pesan || 'Gagal memperbarui produk';
+      toast.error(errorMessage);
+    } finally {
+      setEditLoading(false);
     }
   };
 
@@ -224,11 +393,25 @@ Highlight:
       newErrors.namaGame = 'Nama game wajib diisi';
     }
     if (!formData.hargaEth) {
-      newErrors.hargaEth = 'Harga ETH wajib diisi';
-    } else if (parseFloat(formData.hargaEth) < 0.001) {
-      newErrors.hargaEth = 'Harga minimal 0.001 ETH';
-    } else if (parseFloat(formData.hargaEth) > 10) {
-      newErrors.hargaEth = 'Harga maksimal 10 ETH';
+      newErrors.hargaEth = 'Harga wajib diisi';
+    } else {
+      const hargaValue = parseFloat(formData.hargaEth);
+      if (currencyMode === 'ETH') {
+        if (hargaValue < 0.001) {
+          newErrors.hargaEth = 'Harga minimal 0.001 ETH';
+        } else if (hargaValue > 10) {
+          newErrors.hargaEth = 'Harga maksimal 10 ETH';
+        }
+      } else { // IDR mode
+        const currentRate = ethToIdrRate || 68300000;
+        const minIdr = Math.round(0.001 * currentRate);
+        const maxIdr = Math.round(10 * currentRate);
+        if (hargaValue < minIdr) {
+          newErrors.hargaEth = `Harga minimal ${formatIdrPrice(minIdr)}`;
+        } else if (hargaValue > maxIdr) {
+          newErrors.hargaEth = `Harga maksimal ${formatIdrPrice(maxIdr)}`;
+        }
+      }
     }
     if (!formData.deskripsi.trim()) {
       newErrors.deskripsi = 'Deskripsi wajib diisi';
@@ -251,11 +434,17 @@ Highlight:
 
     try {
       setAddLoading(true);
+      // Convert to ETH if currently in IDR mode
+      let hargaEthValue = formData.hargaEth;
+      if (currencyMode === 'IDR') {
+        hargaEthValue = convertCurrency(formData.hargaEth, 'IDR', 'ETH');
+      }
+
       const response = await apiService.produk.createProduk({
         judulProduk: formData.judulProduk.trim(),
         namaGame: formData.namaGame.trim(),
         deskripsi: formData.deskripsi.trim(),
-        hargaEth: parseFloat(formData.hargaEth),
+        hargaEth: parseFloat(hargaEthValue),
         gambar: Array.isArray(formData.gambar) ? formData.gambar : []
       });
 
@@ -312,8 +501,53 @@ Highlight:
     }
   };
 
-  const handleEdit = (produkId) => {
-    navigate(`/edit-produk/${produkId}`);
+  const handleEdit = async (produkId) => {
+    try {
+      // Load produk data untuk edit
+      const response = await apiService.produk.getProdukById(produkId);
+      if (response.data.sukses) {
+        const produk = response.data.data.produk;
+        
+        // Cek apakah user adalah pemilik produk
+        if (produk.penjual.id !== user.id) {
+          toast.error('Anda tidak memiliki akses untuk mengedit produk ini');
+          return;
+        }
+        
+        // Parse image data properly
+        let allImageUrls = [];
+        if (Array.isArray(produk.gambar)) {
+          allImageUrls = produk.gambar;
+        } else if (typeof produk.gambar === 'string' && produk.gambar.trim()) {
+          try {
+            const parsed = JSON.parse(produk.gambar);
+            if (Array.isArray(parsed)) {
+              allImageUrls = parsed;
+            } else {
+              allImageUrls = [produk.gambar];
+            }
+          } catch (e) {
+            allImageUrls = [produk.gambar];
+          }
+        }
+        
+        setEditProduk(produk);
+        setEditFormData({
+          judulProduk: produk.judulProduk,
+          namaGame: produk.namaGame,
+          deskripsi: produk.deskripsi || '',
+          hargaEth: produk.hargaEth.toString(),
+          gambar: allImageUrls,
+          statusJual: produk.statusJual
+        });
+        setEditErrors({});
+        setHasUnsavedEditImages(false);
+        setShowEditModal(true);
+      }
+    } catch (error) {
+      console.error('Error loading produk for edit:', error);
+      toast.error('Gagal memuat data produk');
+    }
   };
 
   const handleDelete = async (produkId) => {
@@ -725,7 +959,7 @@ Highlight:
                             {item.hargaEth ? `${item.hargaEth} ETH` : 'N/A'}
                           </div>
                           <div className="text-xs text-gray-500">
-                            ≈ {formatRupiah(item.harga || 0)}
+                            ≈ {formatIdrPrice(convertEthToIdr(item.hargaEth || 0))}
                           </div>
                         </div>
                         <div className="text-xs text-gray-500 flex items-center">
@@ -885,21 +1119,27 @@ Highlight:
                     <div className="space-y-3">
                       {/* Input ETH */}
                       <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <span className="text-gray-500 sm:text-sm">ETH</span>
-                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleCurrencyToggle(currencyMode, setCurrencyMode, formData.hargaEth, setFormData, 'hargaEth')}
+                          className="absolute inset-y-0 left-0 pl-3 flex items-center hover:bg-gray-100 rounded-l-md transition-colors"
+                        >
+                          <span className="text-gray-500 sm:text-sm font-medium">
+                            {currencyMode}
+                          </span>
+                        </button>
                         <input
                           type="number"
                           name="hargaEth"
                           value={formData.hargaEth}
                           onChange={(e) => {
                             handleInputChange(e);
-                            convertEthToIdr(e.target.value);
+                            handleEthToIdrConversion(e.target.value);
                           }}
-                          placeholder="0.001"
-                          step="0.001"
-                          min="0.001"
-                          max="10"
+                          placeholder={currencyMode === 'ETH' ? '0.001' : '65000'}
+                          step={currencyMode === 'ETH' ? '0.001' : '1000'}
+                          min={currencyMode === 'ETH' ? '0.001' : Math.round(0.001 * (ethToIdrRate || 68300000))}
+                          max={currencyMode === 'ETH' ? '10' : Math.round(10 * (ethToIdrRate || 68300000))}
                           className={`w-full pl-12 pr-3 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500 ${
                             errors.hargaEth ? 'border-red-300' : 'border-gray-300'
                           }`}
@@ -927,7 +1167,7 @@ Highlight:
                               type="button"
                               onClick={() => {
                                 setFormData(prev => ({ ...prev, hargaEth: suggestion.eth }));
-                                convertEthToIdr(suggestion.eth);
+                                handleEthToIdrConversion(suggestion.eth);
                               }}
                               className="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded border text-center transition-colors"
                             >
@@ -943,7 +1183,10 @@ Highlight:
                       <p className="mt-1 text-sm text-red-600">{errors.hargaEth}</p>
                     )}
                     <p className="mt-1 text-sm text-gray-500">
-                      Harga minimal 0.001 ETH, maksimal 10 ETH
+                      {currencyMode === 'ETH'
+                        ? 'Harga minimal 0.001 ETH, maksimal 10 ETH'
+                        : `Harga minimal ${formatIdrPrice(0.001 * (ethToIdrRate || 68300000))}, maksimal ${formatIdrPrice(10 * (ethToIdrRate || 68300000))}`
+                      }
                     </p>
                   </div>
 
@@ -1061,16 +1304,22 @@ Highlight:
                         <div className="flex justify-between items-center">
                           <div>
                             <div className="text-lg font-bold text-blue-600">
-                              {formData.hargaEth ? `${formData.hargaEth} ETH` : '0.000 ETH'}
+                              {formData.hargaEth ?
+                                (currencyMode === 'ETH' ?
+                                  `${formData.hargaEth} ETH` :
+                                  formatRupiah(parseFloat(formData.hargaEth))
+                                ) :
+                                (currencyMode === 'ETH' ? '0.000 ETH' : formatRupiah(0))
+                              }
                             </div>
-                            {priceInfo.idrAmount > 0 && (
+                            {formData.hargaEth && currencyMode === 'ETH' && (
                               <div className="text-xs text-gray-500">
-                                ≈ {new Intl.NumberFormat('id-ID', {
-                                  style: 'currency',
-                                  currency: 'IDR',
-                                  minimumFractionDigits: 0,
-                                  maximumFractionDigits: 0
-                                }).format(priceInfo.idrAmount)}
+                                ≈ {formatIdrPrice(convertEthToIdr(parseFloat(formData.hargaEth)))}
+                              </div>
+                            )}
+                            {formData.hargaEth && currencyMode === 'IDR' && (
+                              <div className="text-xs text-gray-500">
+                                ≈ {formatEthPrice(convertIdrToEth(parseFloat(formData.hargaEth)))}
                               </div>
                             )}
                           </div>
@@ -1129,6 +1378,317 @@ Highlight:
                       <>
                         <DevicePhoneMobileIcon className="h-4 w-4" />
                         <span>Tambah Produk</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Edit Produk */}
+      {showEditModal && editProduk && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-semibold text-gray-900">
+                  Edit Produk
+                </h3>
+                <button
+                  onClick={() => {
+                    if (hasUnsavedEditImages) {
+                      if (window.confirm('Anda memiliki perubahan gambar yang belum disimpan. Yakin ingin meninggalkan halaman?')) {
+                        setShowEditModal(false);
+                        setEditProduk(null);
+                      }
+                    } else {
+                      setShowEditModal(false);
+                      setEditProduk(null);
+                    }
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <form onSubmit={handleEditProduct} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Form Fields */}
+                <div className="lg:col-span-2 space-y-6">
+                  {/* Judul Produk */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Judul Produk *
+                    </label>
+                    <input
+                      type="text"
+                      name="judulProduk"
+                      value={editFormData.judulProduk}
+                      onChange={handleEditInputChange}
+                      className={`w-full px-3 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500 ${
+                        editErrors.judulProduk ? 'border-red-300' : 'border-gray-300'
+                      }`}
+                    />
+                    {editErrors.judulProduk && (
+                      <p className="mt-1 text-sm text-red-600">{editErrors.judulProduk}</p>
+                    )}
+                  </div>
+
+                  {/* Nama Game */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Nama Game *
+                    </label>
+                    <input
+                      type="text"
+                      name="namaGame"
+                      value={editFormData.namaGame}
+                      onChange={handleEditInputChange}
+                      className={`w-full px-3 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500 ${
+                        editErrors.namaGame ? 'border-red-300' : 'border-gray-300'
+                      }`}
+                    />
+                    {editErrors.namaGame && (
+                      <p className="mt-1 text-sm text-red-600">{editErrors.namaGame}</p>
+                    )}
+                  </div>
+
+                  {/* Harga ETH */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Harga dalam ETH *
+                    </label>
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => handleCurrencyToggle(editCurrencyMode, setEditCurrencyMode, editFormData.hargaEth, setEditFormData, 'hargaEth')}
+                        className="absolute inset-y-0 left-0 pl-3 flex items-center hover:bg-gray-100 rounded-l-md transition-colors"
+                      >
+                        <span className="text-gray-500 sm:text-sm font-medium">
+                          {editCurrencyMode}
+                        </span>
+                      </button>
+                      <input
+                        type="number"
+                        name="hargaEth"
+                        value={editFormData.hargaEth}
+                        onChange={handleEditInputChange}
+                        step={editCurrencyMode === 'ETH' ? '0.001' : '1000'}
+                        min={editCurrencyMode === 'ETH' ? '0.001' : Math.round(0.001 * (ethToIdrRate || 68300000))}
+                        max={editCurrencyMode === 'ETH' ? '10' : Math.round(10 * (ethToIdrRate || 68300000))}
+                        className={`w-full pl-12 pr-3 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500 ${
+                          editErrors.hargaEth ? 'border-red-300' : 'border-gray-300'
+                        }`}
+                      />
+                    </div>
+                    {editErrors.hargaEth && (
+                      <p className="mt-1 text-sm text-red-600">{editErrors.hargaEth}</p>
+                    )}
+                  </div>
+
+                  {/* Upload Gambar */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Screenshot Akun
+                    </label>
+                    <ImageUploadSimple
+                      maxFiles={5}
+                      currentImages={Array.isArray(editFormData.gambar) ? editFormData.gambar : (editFormData.gambar ? [editFormData.gambar] : [])}
+                      onUploadSuccess={(urls) => {
+                        console.log('🖼️ Edit Image upload success:', urls);
+                        setEditFormData(prev => ({
+                          ...prev,
+                          gambar: urls
+                        }));
+                        setHasUnsavedEditImages(true);
+                        toast.success('Gambar berhasil diupload! Jangan lupa klik "Perbarui Produk" untuk menyimpan perubahan.');
+                      }}
+                      onUploadError={(error) => {
+                        console.error('❌ Edit Image upload error:', error);
+                        toast.error('Gagal upload gambar');
+                      }}
+                      className="w-full"
+                    />
+                    {hasUnsavedEditImages && (
+                      <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                        <div className="flex">
+                          <div className="flex-shrink-0">
+                            <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                            </svg>
+                          </div>
+                          <div className="ml-3">
+                            <p className="text-sm text-yellow-800">
+                              <strong>Perhatian:</strong> Anda telah mengubah gambar produk. Klik tombol "Perbarui Produk" di bawah untuk menyimpan perubahan.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Deskripsi */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Deskripsi Detail *
+                    </label>
+                    <textarea
+                      name="deskripsi"
+                      value={editFormData.deskripsi}
+                      onChange={handleEditInputChange}
+                      rows={6}
+                      maxLength={500}
+                      className={`w-full px-3 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500 ${
+                        editErrors.deskripsi ? 'border-red-300' : 'border-gray-300'
+                      }`}
+                    />
+                    {editErrors.deskripsi && (
+                      <p className="mt-1 text-sm text-red-600">{editErrors.deskripsi}</p>
+                    )}
+                    <p className="mt-1 text-sm text-gray-500">
+                      {editFormData.deskripsi.length}/500 karakter
+                    </p>
+                  </div>
+                </div>
+
+                {/* Sidebar Preview */}
+                <div className="lg:col-span-1">
+                  <div className="bg-gray-50 rounded-lg p-4 sticky top-4">
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4">Preview Produk</h4>
+                    <div className="border rounded-lg p-4 bg-white">
+                      {/* Preview Image */}
+                      <div className="w-full h-32 bg-gray-200 rounded-md mb-3 flex items-center justify-center">
+                        {(() => {
+                          let imageUrl = null;
+                          if (Array.isArray(editFormData.gambar) && editFormData.gambar.length > 0) {
+                            imageUrl = editFormData.gambar[0];
+                          } else if (typeof editFormData.gambar === 'string' && editFormData.gambar.trim()) {
+                            try {
+                              const parsed = JSON.parse(editFormData.gambar);
+                              if (Array.isArray(parsed) && parsed.length > 0) {
+                                imageUrl = parsed[0];
+                              } else {
+                                imageUrl = editFormData.gambar;
+                              }
+                            } catch (e) {
+                              imageUrl = editFormData.gambar;
+                            }
+                          }
+                          
+                          return imageUrl ? (
+                            <img
+                              src={imageUrl}
+                              alt="Preview"
+                              className="w-full h-full object-cover rounded-md"
+                            />
+                          ) : (
+                            <PhotoIcon className="h-8 w-8 text-gray-400" />
+                          );
+                        })()}
+                      </div>
+                      {/* Show image count if multiple images */}
+                      {(() => {
+                        let imageCount = 0;
+                        if (Array.isArray(editFormData.gambar)) {
+                          imageCount = editFormData.gambar.length;
+                        } else if (typeof editFormData.gambar === 'string' && editFormData.gambar.trim()) {
+                          try {
+                            const parsed = JSON.parse(editFormData.gambar);
+                            if (Array.isArray(parsed)) {
+                              imageCount = parsed.length;
+                            } else {
+                              imageCount = 1;
+                            }
+                          } catch (e) {
+                            imageCount = 1;
+                          }
+                        }
+                        
+                        return imageCount > 1 ? (
+                          <div className="text-xs text-gray-500 text-center mb-2">
+                            +{imageCount - 1} gambar lainnya
+                          </div>
+                        ) : null;
+                      })()}
+                      {/* Preview Content */}
+                      <div className="space-y-2">
+                        <div className="text-sm font-medium text-gray-900">
+                          {editFormData.judulProduk || 'Judul Produk Anda'}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {editFormData.namaGame || 'Nama Game'}
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <div className="text-lg font-bold text-blue-600">
+                              {editFormData.hargaEth ?
+                                (editCurrencyMode === 'ETH' ?
+                                  `${editFormData.hargaEth} ETH` :
+                                  formatRupiah(parseFloat(editFormData.hargaEth))
+                                ) :
+                                (editCurrencyMode === 'ETH' ? '0.000 ETH' : formatRupiah(0))
+                              }
+                            </div>
+                            {editFormData.hargaEth && editCurrencyMode === 'ETH' && (
+                              <div className="text-xs text-gray-500">
+                                ≈ {formatIdrPrice(convertEthToIdr(parseFloat(editFormData.hargaEth)))}
+                              </div>
+                            )}
+                            {editFormData.hargaEth && editCurrencyMode === 'IDR' && (
+                              <div className="text-xs text-gray-500">
+                                ≈ {formatEthPrice(convertIdrToEth(parseFloat(editFormData.hargaEth)))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        {editFormData.deskripsi && (
+                          <div className="text-xs text-gray-600 mt-2 line-clamp-3">
+                            {editFormData.deskripsi.substring(0, 100)}...
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Submit Button */}
+                <div className="lg:col-span-3 flex justify-end space-x-4 pt-6 border-t">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (hasUnsavedEditImages) {
+                        if (window.confirm('Anda memiliki perubahan gambar yang belum disimpan. Yakin ingin membatalkan?')) {
+                          setShowEditModal(false);
+                          setEditProduk(null);
+                        }
+                      } else {
+                        setShowEditModal(false);
+                        setEditProduk(null);
+                      }
+                    }}
+                    className="px-6 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={editLoading}
+                    className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center space-x-2"
+                  >
+                    {editLoading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        <span>Menyimpan...</span>
+                      </>
+                    ) : (
+                      <>
+                        <DevicePhoneMobileIcon className="h-4 w-4" />
+                        <span>Perbarui Produk</span>
                       </>
                     )}
                   </button>
@@ -1376,7 +1936,7 @@ Highlight:
                       </span>
                     </div>
                     <div className="text-right text-gray-600">
-                      ≈ {formatRupiah(selectedProduk.harga || 2000000)}
+                      ≈ {formatIdrPrice(convertEthToIdr(selectedProduk.hargaEth || 0))}
                     </div>
                   </div>
 

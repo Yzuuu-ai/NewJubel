@@ -3,7 +3,8 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../konteks/AuthContext';
 import { useWallet } from '../../konteks/WalletContext';
 import { apiService } from '../../layanan/api';
-import { 
+import { useEthToIdrRate } from '../../hooks/useEthPrice';
+import {
   DevicePhoneMobileIcon,
   UserIcon,
   ClockIcon,
@@ -295,6 +296,7 @@ const DetailProduk = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
   const { isConnected, walletAddress, balance } = useWallet();
+  const { rate: ethToIdrRate } = useEthToIdrRate();
   const [produk, setProduk] = useState(null);
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState(false);
@@ -554,7 +556,7 @@ const DetailProduk = () => {
                   {produk.hargaEth ? `${produk.hargaEth} ETH` : 'N/A'}
                 </div>
                 <div className="text-sm text-gray-500 mt-2">
-                  ≈ {formatRupiah(produk.harga)}
+                  ≈ {formatRupiah((produk.hargaEth || 0) * ethToIdrRate)}
                 </div>
               </div>
             </div>
