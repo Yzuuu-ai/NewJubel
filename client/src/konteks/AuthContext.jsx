@@ -53,17 +53,21 @@ export const AuthProvider = ({ children }) => {
           // Handle different response structures
           const validatedUser = response.data.user || response.data.data?.pengguna || response.data.data?.user || response.data.data;
           if (validatedUser) {
-            // Ensure consistent user object structure with ALL fields
+            // PERBAIKAN: Ensure consistent user object structure with ALL fields including wallet
             const normalizedUser = {
               id: validatedUser.id,
               email: validatedUser.email,
               role: validatedUser.role,
-              walletAddress: validatedUser.walletAddress,
+              // PERBAIKAN: Handle multiple possible wallet address fields
+              walletAddress: validatedUser.walletAddress || validatedUser.alamatWallet,
+              alamatWallet: validatedUser.alamatWallet || validatedUser.walletAddress,
               dibuatPada: validatedUser.dibuatPada,
               profil: {
                 nama: validatedUser.nama || validatedUser.profil?.nama || validatedUser.profile?.nama || '',
                 nomor_telepon: validatedUser.nomor_telepon || validatedUser.profil?.nomor_telepon || validatedUser.profile?.nomor_telepon || '',
-                alamat: validatedUser.alamat || validatedUser.profil?.alamat || validatedUser.profile?.alamat || ''
+                alamat: validatedUser.alamat || validatedUser.profil?.alamat || validatedUser.profile?.alamat || '',
+                // PERBAIKAN: Tambahkan alamatWallet di profil juga
+                alamatWallet: validatedUser.walletAddress || validatedUser.alamatWallet || validatedUser.profil?.alamatWallet
               }
             };
             
@@ -79,9 +83,20 @@ export const AuthProvider = ({ children }) => {
         }
       } catch (apiError) {
         console.warn('⚠️ Token validation API failed, using stored user data:', apiError.message);
-        // Fallback to stored user data if API fails
-        setUser(parsedUser);
+        // PERBAIKAN: Fallback to stored user data dengan normalisasi struktur
+        const normalizedStoredUser = {
+          ...parsedUser,
+          walletAddress: parsedUser.walletAddress || parsedUser.alamatWallet,
+          alamatWallet: parsedUser.alamatWallet || parsedUser.walletAddress,
+          profil: {
+            ...parsedUser.profil,
+            alamatWallet: parsedUser.walletAddress || parsedUser.alamatWallet || parsedUser.profil?.alamatWallet
+          }
+        };
+        setUser(normalizedStoredUser);
         setIsAuthenticated(true);
+        // Update storage dengan struktur yang dinormalisasi
+        storage.setItem('user', JSON.stringify(normalizedStoredUser));
       }
     } catch (error) {
       console.error('❌ User validation failed:', error);
@@ -106,17 +121,19 @@ export const AuthProvider = ({ children }) => {
       if (response.data.sukses) {
         const { token, pengguna } = response.data.data;
         
-        // Normalize user data to include all fields
+        // PERBAIKAN: Normalize user data to include all fields including wallet
         const normalizedUser = {
           id: pengguna.id,
           email: pengguna.email,
           role: pengguna.role,
-          walletAddress: pengguna.walletAddress,
+          walletAddress: pengguna.walletAddress || pengguna.alamatWallet,
+          alamatWallet: pengguna.alamatWallet || pengguna.walletAddress,
           dibuatPada: pengguna.dibuatPada,
           profil: {
             nama: pengguna.nama || pengguna.profil?.nama || pengguna.profile?.nama || '',
             nomor_telepon: pengguna.nomor_telepon || pengguna.profil?.nomor_telepon || pengguna.profile?.nomor_telepon || '',
-            alamat: pengguna.alamat || pengguna.profil?.alamat || pengguna.profile?.alamat || ''
+            alamat: pengguna.alamat || pengguna.profil?.alamat || pengguna.profile?.alamat || '',
+            alamatWallet: pengguna.walletAddress || pengguna.alamatWallet || pengguna.profil?.alamatWallet
           }
         };
         
@@ -198,24 +215,31 @@ export const AuthProvider = ({ children }) => {
       if (response.data.sukses) {
         const updatedData = response.data.data;
         
+        // PERBAIKAN: Handle wallet address update dengan lebih robust
+        const newWalletAddress = profileData.alamatWallet || updatedData.walletAddress || updatedData.alamatWallet;
+        
         // Update user object dengan data baru dari response
         const updatedUser = {
           ...user,
           id: updatedData.id || user.id,
           email: updatedData.email || user.email,
           role: updatedData.role || user.role,
-          walletAddress: updatedData.walletAddress || user.walletAddress,
+          // PERBAIKAN: Pastikan wallet address ter-update dengan benar
+          walletAddress: newWalletAddress || user.walletAddress,
+          alamatWallet: newWalletAddress || user.alamatWallet,
           dibuatPada: updatedData.dibuatPada || user.dibuatPada,
           profil: {
-            nama: updatedData.profil?.nama || '',
-            nomor_telepon: updatedData.profil?.nomor_telepon || '',
-            alamat: updatedData.profil?.alamat || ''
+            nama: updatedData.profil?.nama || user.profil?.nama || '',
+            nomor_telepon: updatedData.profil?.nomor_telepon || user.profil?.nomor_telepon || '',
+            alamat: updatedData.profil?.alamat || user.profil?.alamat || '',
+            // PERBAIKAN: Tambahkan alamatWallet di profil juga
+            alamatWallet: newWalletAddress || user.profil?.alamatWallet
           }
         };
         
         console.log('🔄 Updated user object:', updatedUser);
         
-        // Update storage (consistent with localStorage)
+        // PERBAIKAN: Update storage dengan struktur yang konsisten
         localStorage.setItem('user', JSON.stringify(updatedUser));
         
         // Update state
@@ -248,11 +272,11 @@ export const AuthProvider = ({ children }) => {
   };
 
   const hasWallet = () => {
-    return user?.walletAddress ? true : false;
+    return (user?.walletAddress || user?.alamatWallet) ? true : false;
   };
 
   const getWalletAddress = () => {
-    return user?.walletAddress || null;
+    return user?.walletAddress || user?.alamatWallet || null;
   };
 
   // Check if user can sell (any user can sell)
@@ -277,10 +301,20 @@ export const AuthProvider = ({ children }) => {
     return true; // Allow RoleGuard to handle the actual check
   };
 
-  // Function to directly update user state (for immediate UI updates)
+  // PERBAIKAN: Function to directly update user state (for immediate UI updates)
   const setUserData = (userData) => {
-    setUser(userData);
-    localStorage.setItem('user', JSON.stringify(userData));
+    // Normalize data structure before setting
+    const normalizedUserData = {
+      ...userData,
+      walletAddress: userData.walletAddress || userData.alamatWallet,
+      alamatWallet: userData.alamatWallet || userData.walletAddress,
+      profil: {
+        ...userData.profil,
+        alamatWallet: userData.walletAddress || userData.alamatWallet || userData.profil?.alamatWallet
+      }
+    };
+    setUser(normalizedUserData);
+    localStorage.setItem('user', JSON.stringify(normalizedUserData));
   };
 
   const value = {

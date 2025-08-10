@@ -102,14 +102,32 @@ class Web3Service {
       throw new Error('Failed to add Sepolia network to MetaMask');
     }
   }
-  // Get current account
+  // PERBAIKAN: Get current account - deteksi wallet yang sudah terhubung
   async getCurrentAccount() {
     try {
-      if (!this.provider) {
+      // PERBAIKAN: Cek wallet yang sudah terhubung tanpa memerlukan provider yang sudah diinisialisasi
+      if (!this.isMetaMaskInstalled()) {
         return null;
       }
-      const accounts = await this.provider.listAccounts();
-      return accounts.length > 0 ? accounts[0].address : null;
+
+      // PERBAIKAN: Gunakan ethereum.request langsung untuk cek akun yang sudah terhubung
+      const accounts = await window.ethereum.request({
+        method: 'eth_accounts'
+      });
+
+      if (accounts && accounts.length > 0) {
+        // PERBAIKAN: Jika ada akun terhubung, inisialisasi provider juga
+        if (!this.provider) {
+          this.provider = new ethers.BrowserProvider(window.ethereum);
+          this.signer = await this.provider.getSigner();
+          this.account = accounts[0];
+          // Setup contract juga
+          this.contract = new ethers.Contract(CONTRACT_ADDRESS, EscrowABI, this.signer);
+        }
+        return accounts[0];
+      }
+
+      return null;
     } catch (error) {
       console.error('Error getting current account:', error);
       return null;
@@ -294,22 +312,39 @@ class Web3Service {
     };
     return statuses[statusCode] || 'UNKNOWN';
   }
-  // Listen for account changes
+  // PERBAIKAN: Listen for account changes tanpa reload
   setupEventListeners() {
     if (!this.isMetaMaskInstalled()) return;
+    
+    // PERBAIKAN: Hapus listener lama untuk mencegah duplikasi
+    if (window.ethereum.removeAllListeners) {
+      window.ethereum.removeAllListeners('accountsChanged');
+      window.ethereum.removeAllListeners('chainChanged');
+    }
+    
     window.ethereum.on('accountsChanged', (accounts) => {
+      console.log('🔄 Account changed:', accounts);
       if (accounts.length === 0) {
         // User disconnected wallet
         this.disconnect();
+        console.log('❌ Wallet disconnected');
       } else {
         // User switched account
         this.account = accounts[0];
-        window.location.reload(); // Refresh to update UI
+        console.log('🔄 Account switched to:', accounts[0]);
+        // PERBAIKAN: Dispatch custom event instead of reload
+        window.dispatchEvent(new CustomEvent('walletAccountChanged', {
+          detail: { account: accounts[0] }
+        }));
       }
     });
+    
     window.ethereum.on('chainChanged', (chainId) => {
-      // User switched network
-      window.location.reload(); // Refresh to update UI
+      console.log('🔄 Chain changed:', chainId);
+      // PERBAIKAN: Dispatch custom event instead of reload
+      window.dispatchEvent(new CustomEvent('walletChainChanged', {
+        detail: { chainId }
+      }));
     });
   }
   // Disconnect wallet

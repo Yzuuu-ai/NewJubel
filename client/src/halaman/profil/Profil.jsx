@@ -40,6 +40,8 @@ const Profil = () => {
     message: '',
     isAvailable: null
   });
+  // PERBAIKAN: State untuk force refresh UI
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // Load profile data
   useEffect(() => {
@@ -56,6 +58,28 @@ const Profil = () => {
   useEffect(() => {
     console.log('👤 User state changed:', user);
   }, [user]);
+
+  // PERBAIKAN: Listen untuk wallet connected event
+  useEffect(() => {
+    const handleWalletConnected = (event) => {
+      console.log('🔄 Wallet connected event received:', event.detail);
+      // Force refresh state
+      setRefreshTrigger(prev => prev + 1);
+    };
+
+    window.addEventListener('walletConnected', handleWalletConnected);
+    
+    return () => {
+      window.removeEventListener('walletConnected', handleWalletConnected);
+    };
+  }, []);
+
+  // PERBAIKAN: Force re-render saat refreshTrigger berubah
+  useEffect(() => {
+    if (refreshTrigger > 0) {
+      console.log('🔄 Forcing component re-render due to refresh trigger:', refreshTrigger);
+    }
+  }, [refreshTrigger]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -189,8 +213,8 @@ const Profil = () => {
         return;
       }
 
-      // BLOKIR jika user sudah punya wallet terhubung
-      if (user?.walletAddress) {
+      // PERBAIKAN: BLOKIR jika user sudah punya wallet terhubung (cek semua kemungkinan field)
+      if (user?.walletAddress || user?.alamatWallet || user?.profil?.alamatWallet) {
         toast.error(
           'Wallet sudah terhubung secara permanen!\n' +
           'Untuk keamanan, satu akun hanya bisa terhubung dengan satu wallet selamanya.'
@@ -252,22 +276,29 @@ const Profil = () => {
           console.log('✅ Save wallet response:', response.data);
           
           if (response.data.sukses) {
-            // Update user state dengan data terbaru dari response
+            // PERBAIKAN: Update user state dengan struktur yang konsisten
             const updatedUserData = {
               ...user,
               walletAddress: walletResult.address,
-              alamatWallet: walletResult.address, // Tambahkan field ini juga
+              alamatWallet: walletResult.address,
               profil: {
-                ...user.profil,
-                alamatWallet: walletResult.address, // Pastikan ada di profil juga
-                ...response.data.data?.profil
+                ...user?.profil,
+                alamatWallet: walletResult.address,
+                // Merge dengan data dari response jika ada
+                ...(response.data.data?.profil || {})
               }
             };
             
             console.log('🔄 Updating user data:', updatedUserData);
             
-            // Update AuthContext state langsung
+            // PERBAIKAN: Update localStorage secara eksplisit untuk memastikan persistensi
+            localStorage.setItem('user', JSON.stringify(updatedUserData));
+            
+            // Update AuthContext state
             setUser(updatedUserData);
+            
+            // PERBAIKAN: Tunggu sebentar sebelum refresh untuk memastikan state ter-update
+            await new Promise(resolve => setTimeout(resolve, 500));
             
             // Force refresh user data dari server untuk memastikan sinkronisasi
             try {
@@ -275,24 +306,41 @@ const Profil = () => {
               const refreshedUser = await apiService.auth.getProfile();
               if (refreshedUser.data.sukses) {
                 console.log('✅ Refreshed user data:', refreshedUser.data.data);
-                setUser(refreshedUser.data.data);
+                
+                // PERBAIKAN: Pastikan struktur data konsisten saat refresh
+                const normalizedRefreshedUser = {
+                  ...refreshedUser.data.data,
+                  walletAddress: refreshedUser.data.data.walletAddress || refreshedUser.data.data.alamatWallet,
+                  alamatWallet: refreshedUser.data.data.alamatWallet || refreshedUser.data.data.walletAddress,
+                  profil: {
+                    ...refreshedUser.data.data.profil,
+                    alamatWallet: refreshedUser.data.data.walletAddress || refreshedUser.data.data.alamatWallet
+                  }
+                };
+                
+                // Update localStorage dengan data yang ter-refresh
+                localStorage.setItem('user', JSON.stringify(normalizedRefreshedUser));
+                setUser(normalizedRefreshedUser);
               }
             } catch (refreshError) {
               console.warn('Warning: Could not refresh user data:', refreshError);
             }
             
-            // Update WalletContext juga jika ada
-            if (walletAddress && walletAddress.toLowerCase() === walletResult.address.toLowerCase()) {
-              console.log('✅ Wallet addresses match, connection verified');
-            }
-            
             toast.success('🔒 Wallet berhasil terhubung PERMANEN ke akun Anda!', { duration: 5000 });
             
-            // Tambahan: Reload halaman setelah 2 detik untuk memastikan UI ter-update
-            setTimeout(() => {
-              console.log('🔄 Reloading page to ensure UI sync...');
-              window.location.reload();
-            }, 2000);
+            // PERBAIKAN: Force refresh UI untuk memastikan wallet muncul
+            console.log('✅ Wallet connection completed successfully');
+            
+            // Trigger re-render dengan mengubah state
+            setRefreshTrigger(prev => prev + 1);
+            
+            // Force update editData untuk trigger re-render
+            setEditData(prev => ({ ...prev }));
+            
+            // Dispatch custom event untuk memaksa update komponen lain
+            window.dispatchEvent(new CustomEvent('walletConnected', {
+              detail: { address: walletResult.address }
+            }));
             
           } else {
             console.error('❌ Failed to save wallet:', response.data);
@@ -488,7 +536,7 @@ const Profil = () => {
                 </div>
 
                 {/* Wallet Address - Read Only */}
-                <div>
+                <div key={`wallet-section-${refreshTrigger}`}>
                   <div className="flex items-center space-x-2 mb-2">
                     <label className="block text-sm font-medium text-gray-700">
                       Alamat Wallet
@@ -508,33 +556,34 @@ const Profil = () => {
                       </div>
                     </div>
                   </div>
-                  {user?.walletAddress || user?.alamatWallet ? (
-                    // Wallet sudah terhubung PERMANEN
+                  {(user?.walletAddress || user?.alamatWallet || user?.profil?.alamatWallet) ? (
+                    // Wallet sudah terhubung
                     <div className="space-y-2">
-                      <div className="flex items-center space-x-3 p-3 bg-green-50 border border-green-200 rounded-md">
-                        <div className="flex-shrink-0">
-                          <ShieldCheckIcon className="h-5 w-5 text-green-500" />
+                      <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-md">
+                        <div className="flex items-center space-x-3">
+                          <div className="flex-shrink-0">
+                            <ShieldCheckIcon className="h-5 w-5 text-blue-500" />
+                          </div>
+                          <div>
+                            <p className="text-base font-medium text-blue-800">
+                              Wallet Terhubung
+                            </p>
+                          </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-green-800">
-                            Wallet Terhubung Permanen
-                          </p>
-                          <p className="text-xs text-green-600 font-mono break-all">
-                            {user.walletAddress || user.alamatWallet}
-                          </p>
-                          <p className="text-xs text-green-500 mt-1">
-                            Terikat selamanya dengan akun ini
+                        <div className="text-right">
+                          <p className="text-sm text-blue-600 font-mono break-all">
+                            {user.walletAddress || user.alamatWallet || user.profil?.alamatWallet}
                           </p>
                         </div>
                       </div>
                       
-                      {walletAddress && walletAddress !== (user.walletAddress || user.alamatWallet) && (
+                      {walletAddress && walletAddress !== (user.walletAddress || user.alamatWallet || user.profil?.alamatWallet) && (
                         <div className="bg-orange-50 border border-orange-200 rounded-md p-3">
                           <p className="text-xs text-orange-800 font-medium">Peringatan:</p>
                           <p className="text-xs text-orange-700 mt-1">
-                            Wallet aktif di MetaMask ({walletAddress.slice(0, 6)}...{walletAddress.slice(-4)})
+                            Wallet aktif di extension ({walletAddress.slice(0, 6)}...{walletAddress.slice(-4)})
                             berbeda dengan wallet yang terdaftar di akun Anda.
-                            Silakan ganti ke wallet yang benar di MetaMask.
+                            Silakan ganti ke wallet yang benar di extension.
                           </p>
                         </div>
                       )}
@@ -617,7 +666,9 @@ const Profil = () => {
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Role</span>
                   <span className="text-gray-900 font-medium">
-                    {user?.role === 'ADMIN' ? 'Administrator' : 'Pengguna'}
+                    {user?.role === 'ADMIN' ? 'Administrator' :
+                     user?.role === 'PENJUAL' ? 'Penjual' :
+                     user?.role === 'PEMBELI' ? 'Pembeli' : 'Pengguna'}
                   </span>
                 </div>
               </div>
@@ -627,18 +678,58 @@ const Profil = () => {
             <div className="bg-white rounded-lg shadow-sm p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Aksi Cepat</h3>
               <div className="space-y-3">
-                <button
-                  onClick={() => window.location.href = '/produk'}
-                  className="w-full text-left px-4 py-2 text-primary-600 hover:bg-primary-50 rounded-md transition-colors"
-                >
-                  Lihat Produk
-                </button>
-                <button
-                  onClick={() => window.location.href = '/dashboard'}
-                  className="w-full text-left px-4 py-2 text-primary-600 hover:bg-primary-50 rounded-md transition-colors"
-                >
-                  Dashboard
-                </button>
+                {user?.role === 'ADMIN' ? (
+                  <>
+                    <button
+                      onClick={() => window.location.href = '/admin/dashboard'}
+                      className="w-full text-left px-4 py-2 text-primary-600 hover:bg-primary-50 rounded-md transition-colors"
+                    >
+                      Dashboard Admin
+                    </button>
+                    <button
+                      onClick={() => window.location.href = '/admin/produk'}
+                      className="w-full text-left px-4 py-2 text-primary-600 hover:bg-primary-50 rounded-md transition-colors"
+                    >
+                      Kelola Produk
+                    </button>
+                    <button
+                      onClick={() => window.location.href = '/admin/pengguna'}
+                      className="w-full text-left px-4 py-2 text-primary-600 hover:bg-primary-50 rounded-md transition-colors"
+                    >
+                      Kelola Pengguna
+                    </button>
+                  </>
+                ) : user?.role === 'PENJUAL' ? (
+                  <>
+                    <button
+                      onClick={() => window.location.href = '/produk-saya'}
+                      className="w-full text-left px-4 py-2 text-primary-600 hover:bg-primary-50 rounded-md transition-colors"
+                    >
+                      Produk Saya
+                    </button>
+                    <button
+                      onClick={() => window.location.href = '/dashboard-penjual'}
+                      className="w-full text-left px-4 py-2 text-primary-600 hover:bg-primary-50 rounded-md transition-colors"
+                    >
+                      Transaksi
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => window.location.href = '/produk'}
+                      className="w-full text-left px-4 py-2 text-primary-600 hover:bg-primary-50 rounded-md transition-colors"
+                    >
+                      Lihat Produk
+                    </button>
+                    <button
+                      onClick={() => window.location.href = '/dashboard-pembeli'}
+                      className="w-full text-left px-4 py-2 text-primary-600 hover:bg-primary-50 rounded-md transition-colors"
+                    >
+                      Dashboard Pembeli
+                    </button>
+                  </>
+                )}
                 <button
                   onClick={logout}
                   className="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 rounded-md transition-colors"

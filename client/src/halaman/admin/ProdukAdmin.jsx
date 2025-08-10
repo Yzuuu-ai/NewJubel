@@ -2,9 +2,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { adminAPI } from '../../layanan/api';
 import AdminNavigation from '../../komponen/AdminNavigation';
-import { 
-  ShoppingBagIcon, 
-  ExclamationTriangleIcon, 
+import ConfirmationModal from '../../komponen/ConfirmationModal';
+import {
+  ShoppingBagIcon,
+  ExclamationTriangleIcon,
   CheckCircleIcon,
   XCircleIcon,
   ClockIcon,
@@ -32,6 +33,11 @@ const ProdukAdmin = () => {
   const [showImageViewer, setShowImageViewer] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [viewerImages, setViewerImages] = useState([]);
+  
+  // State untuk confirmation modal
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [productToDelete, setProductToDelete] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   // Read URL parameters for search
   useEffect(() => {
@@ -144,18 +150,23 @@ const ProdukAdmin = () => {
     navigate(newURL, { replace: true });
   };
 
-  const handleDeleteProduct = async (produkId) => {
-    if (!window.confirm('Yakin ingin menghapus produk ini? Tindakan ini tidak dapat dibatalkan.')) {
-      return;
-    }
+  const handleDeleteProduct = (produkId) => {
+    setProductToDelete(produkId);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!productToDelete) return;
 
     try {
-      setUpdateLoading(true);
-      const response = await adminAPI.deleteProduk(produkId);
+      setDeleteLoading(true);
+      const response = await adminAPI.deleteProduk(productToDelete);
       
       if (response.data.sukses) {
         await fetchProduk();
         setShowDetailModal(false);
+        setShowDeleteConfirm(false);
+        setProductToDelete(null);
         toast.success('Produk berhasil dihapus!');
       } else {
         throw new Error(response.data.pesan || 'Gagal menghapus produk');
@@ -164,8 +175,14 @@ const ProdukAdmin = () => {
       console.error('Error deleting product:', error);
       toast.error('Gagal menghapus produk: ' + (error.response?.data?.pesan || error.message));
     } finally {
-      setUpdateLoading(false);
+      setDeleteLoading(false);
     }
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteConfirm(false);
+    setProductToDelete(null);
+    setDeleteLoading(false);
   };
 
   const getStatusBadge = (status) => {
@@ -956,6 +973,19 @@ const ProdukAdmin = () => {
           </div>
         </div>
       )}
+
+      {/* Confirmation Modal untuk Delete */}
+      <ConfirmationModal
+        isOpen={showDeleteConfirm}
+        onClose={cancelDelete}
+        onConfirm={confirmDelete}
+        title="Hapus Produk"
+        message="Yakin ingin menghapus produk ini? Tindakan ini tidak dapat dibatalkan."
+        confirmText="Hapus"
+        cancelText="Batal"
+        type="danger"
+        loading={deleteLoading}
+      />
     </div>
   );
 };

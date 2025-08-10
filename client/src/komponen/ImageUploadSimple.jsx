@@ -99,13 +99,13 @@ const ImageUploadSimple = ({
       {currentImages.length > 0 && (
         <div className="mb-4">
           <p className="text-sm font-medium text-gray-700 mb-2">Gambar Saat Ini:</p>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          <div className="flex gap-2 overflow-x-auto">
             {currentImages.map((imageUrl, index) => (
-              <div key={index} className="relative group">
+              <div key={index} className="relative group flex-shrink-0">
                 <img
                   src={imageUrl}
                   alt={`Preview ${index + 1}`}
-                  className="w-full h-24 object-cover rounded-md border"
+                  className="w-20 h-20 object-cover rounded-md border"
                   onError={(e) => {
                     // Handle broken images or invalid data URLs
                     console.warn('Image failed to load:', imageUrl);
@@ -124,8 +124,9 @@ const ImageUploadSimple = ({
           </div>
         </div>
       )}
-      {/* Upload Area */}
-      <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
+      {/* Upload Area - Only show if less than maxFiles */}
+      {currentImages.length < maxFiles && (
+        <div className="border-2 border-dashed border-gray-300 rounded-lg p-2 hover:border-gray-400 transition-colors">
         <input
           ref={fileInputRef}
           type="file"
@@ -135,32 +136,36 @@ const ImageUploadSimple = ({
           className="hidden"
         />
         {uploading ? (
-          <div className="flex flex-col items-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mb-2"></div>
-            <p className="text-sm text-gray-600">Memproses gambar...</p>
+          <div className="flex items-center justify-center">
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-600 mr-2"></div>
+            <p className="text-xs text-gray-600">Memproses gambar...</p>
           </div>
         ) : (
-          <div className="flex flex-col items-center">
-            <PhotoIcon className="h-12 w-12 text-gray-400 mb-3" />
-            <p className="text-sm font-medium text-gray-900 mb-1">
-              Klik untuk pilih gambar
-            </p>
-            <p className="text-xs text-gray-500 mb-3">
-              PNG, JPG, GIF, WebP hingga 5MB
-              {maxFiles > 1 && ` (Maksimal ${maxFiles} file)`}
-            </p>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <PhotoIcon className="h-6 w-6 text-gray-400 mr-2" />
+              <div>
+                <p className="text-xs font-medium text-gray-900">
+                  Klik untuk pilih gambar
+                </p>
+                <p className="text-xs text-gray-500">
+                  PNG, JPG, GIF, WebP hingga 5MB{maxFiles > 1 && ` (Maksimal ${maxFiles} file)`}
+                </p>
+              </div>
+            </div>
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="bg-primary-600 text-white px-4 py-2 rounded-md hover:bg-primary-700 transition-colors text-sm"
+              className="bg-primary-600 text-white px-3 py-1.5 rounded-md hover:bg-primary-700 transition-colors text-xs flex-shrink-0"
             >
               Pilih Gambar
             </button>
           </div>
         )}
-      </div>
+        </div>
+      )}
       {/* Info */}
-      <div className="mt-3 text-xs text-gray-500">
+      <div className="mt-2 text-xs text-gray-500">
         <p>💡 Tips: Gunakan screenshot yang jelas untuk menunjukkan detail akun game Anda</p>
       </div>
     </div>

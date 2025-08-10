@@ -2,15 +2,15 @@ import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../konteks/AuthContext';
 import { useWallet } from '../konteks/WalletContext';
-import { 
-  HomeIcon, 
-  ShoppingBagIcon, 
-  UserIcon, 
+import {
+  HomeIcon,
+  ShoppingBagIcon,
+  UserIcon,
   CogIcon,
   ArrowRightOnRectangleIcon,
   WalletIcon,
   ChevronDownIcon,
-  DocumentTextIcon
+  BanknotesIcon
 } from '@heroicons/react/24/outline';
 
 const Navbar = () => {
@@ -53,7 +53,7 @@ const Navbar = () => {
     // For PENJUAL users, show Produk Saya and Transaksi in main navigation
     navigation = [
       { name: 'Produk Saya', href: '/produk-saya', icon: ShoppingBagIcon },
-      { name: 'Transaksi', href: '/dashboard', icon: DocumentTextIcon }
+      { name: 'Transaksi', href: '/dashboard', icon: BanknotesIcon }
     ];
   } else {
     // For PEMBELI users and non-authenticated users, show regular navigation

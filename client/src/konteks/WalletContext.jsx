@@ -20,8 +20,22 @@ export const WalletProvider = ({ children }) => {
   // Check wallet connection on component mount
   useEffect(() => {
     checkWalletConnection();
-    setupEventListeners();
+    const cleanup = setupEventListeners();
+    
+    // Cleanup function
+    return () => {
+      if (cleanup) cleanup();
+    };
   }, []);
+  
+  // PERBAIKAN: Re-check wallet connection when user data changes
+  useEffect(() => {
+    if (user) {
+      console.log('👤 User data changed, re-checking wallet connection...');
+      checkWalletConnection();
+    }
+  }, [user]);
+  
   // Auto-validate wallet when user data changes
   useEffect(() => {
     if (user?.walletAddress && account) {
@@ -36,17 +50,38 @@ export const WalletProvider = ({ children }) => {
   }, [account]);
   const checkWalletConnection = async () => {
     try {
+      console.log('🔍 Checking wallet connection...');
+      
       if (!web3Service.isMetaMaskInstalled()) {
+        console.log('❌ MetaMask not installed');
         return;
       }
+
       const currentAccount = await web3Service.getCurrentAccount();
+      console.log('🔍 Current account from web3Service:', currentAccount);
+      
       if (currentAccount) {
+        console.log('✅ Wallet already connected:', currentAccount);
         setAccount(currentAccount);
         setIsConnected(true);
         await updateBalance();
+        
+        // PERBAIKAN: Jika user sudah punya wallet terdaftar, validasi kecocokan
+        if (user?.walletAddress || user?.alamatWallet) {
+          const registeredWallet = user.walletAddress || user.alamatWallet;
+          if (currentAccount.toLowerCase() === registeredWallet.toLowerCase()) {
+            console.log('✅ Connected wallet matches registered wallet');
+          } else {
+            console.log('⚠️ Connected wallet differs from registered wallet');
+          }
+        }
+      } else {
+        console.log('❌ No wallet connected');
+        setAccount(null);
+        setIsConnected(false);
       }
     } catch (error) {
-      console.error('Error checking wallet connection:', error);
+      console.error('❌ Error checking wallet connection:', error);
     }
   };
   const connectWallet = async () => {
@@ -155,17 +190,50 @@ export const WalletProvider = ({ children }) => {
         alamatWallet: walletAddress
       });
       if (result.success) {
+        // PERBAIKAN: Force update wallet context state setelah berhasil link
+        setAccount(walletAddress);
+        setIsConnected(true);
         toast.success('Wallet berhasil dikaitkan dengan akun!');
+        return { success: true };
       } else {
         toast.error(result.error || 'Gagal mengaitkan wallet dengan akun');
+        return { success: false, error: result.error };
       }
     } catch (error) {
       console.error('Error linking wallet to profile:', error);
       toast.error('Gagal mengaitkan wallet dengan akun');
+      return { success: false, error: error.message };
     }
   };
   const setupEventListeners = () => {
     web3Service.setupEventListeners();
+    
+    // PERBAIKAN: Listen untuk custom wallet events
+    const handleAccountChanged = (event) => {
+      console.log('🔄 Wallet account changed event:', event.detail);
+      const newAccount = event.detail.account;
+      setAccount(newAccount);
+      setIsConnected(true);
+      updateBalance();
+    };
+    
+    const handleChainChanged = (event) => {
+      console.log('🔄 Wallet chain changed event:', event.detail);
+      // Re-check connection after chain change
+      setTimeout(() => {
+        checkWalletConnection();
+      }, 1000);
+    };
+    
+    // Add event listeners
+    window.addEventListener('walletAccountChanged', handleAccountChanged);
+    window.addEventListener('walletChainChanged', handleChainChanged);
+    
+    // Cleanup function
+    return () => {
+      window.removeEventListener('walletAccountChanged', handleAccountChanged);
+      window.removeEventListener('walletChainChanged', handleChainChanged);
+    };
   };
   // Validasi apakah wallet yang terhubung sesuai dengan yang terdaftar
   const validateWalletMatch = () => {

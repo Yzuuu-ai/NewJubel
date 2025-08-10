@@ -20,6 +20,7 @@ import {
 } from '@heroicons/react/24/outline';
 import LineClamp from '../../komponen/LineClamp';
 import ImageUploadSimple from '../../komponen/ImageUploadSimple';
+import ConfirmationModal from '../../komponen/ConfirmationModal';
 import { broadcastMarketplaceUpdate, broadcastProductCreated } from '../../hooks/useRealTimeUpdates';
 import { useCurrencyConverter } from '../../hooks/useEthPrice';
 import toast from 'react-hot-toast';
@@ -70,6 +71,11 @@ const ProdukSaya = () => {
   const [showImageViewer, setShowImageViewer] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [viewerImages, setViewerImages] = useState([]);
+  
+  // State untuk confirmation modal
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [productToDelete, setProductToDelete] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   
   // Form data untuk tambah produk
   const [formData, setFormData] = useState({
@@ -425,6 +431,51 @@ Highlight:
     return Object.keys(newErrors).length === 0;
   };
 
+  // Function to calculate completion percentage for add product form
+  const calculateCompletionPercentage = () => {
+    const fields = [
+      { field: 'judulProduk', weight: 20 },
+      { field: 'namaGame', weight: 15 },
+      { field: 'hargaEth', weight: 20 },
+      { field: 'gambar', weight: 25 },
+      { field: 'deskripsi', weight: 20 }
+    ];
+    
+    let totalScore = 0;
+    
+    fields.forEach(({ field, weight }) => {
+      if (field === 'gambar') {
+        // Check if images are uploaded
+        if (formData.gambar && formData.gambar.length > 0) {
+          totalScore += weight;
+        }
+      } else if (field === 'judulProduk') {
+        // Check if title is at least 10 characters
+        if (formData[field] && formData[field].trim().length >= 10) {
+          totalScore += weight;
+        }
+      } else if (field === 'deskripsi') {
+        // Check if description is at least 50 characters
+        if (formData[field] && formData[field].trim().length >= 50) {
+          totalScore += weight;
+        }
+      } else if (field === 'hargaEth') {
+        // Check if price is valid
+        const price = parseFloat(formData[field]);
+        if (formData[field] && !isNaN(price) && price > 0) {
+          totalScore += weight;
+        }
+      } else {
+        // Basic field check
+        if (formData[field] && formData[field].trim()) {
+          totalScore += weight;
+        }
+      }
+    });
+    
+    return Math.round(totalScore);
+  };
+
   const handleAddProduct = async (e) => {
     e.preventDefault();
     if (!validateForm()) {
@@ -550,18 +601,34 @@ Highlight:
     }
   };
 
-  const handleDelete = async (produkId) => {
-    if (!window.confirm('Yakin ingin menghapus produk ini?')) return;
+  const handleDelete = (produkId) => {
+    setProductToDelete(produkId);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!productToDelete) return;
 
     try {
-      const response = await apiService.produk.deleteProduk(produkId);
+      setDeleteLoading(true);
+      const response = await apiService.produk.deleteProduk(productToDelete);
       if (response.data.sukses) {
         toast.success('Produk berhasil dihapus');
         loadProdukSaya();
+        setShowDeleteConfirm(false);
+        setProductToDelete(null);
       }
     } catch (error) {
       toast.error('Gagal menghapus produk');
+    } finally {
+      setDeleteLoading(false);
     }
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteConfirm(false);
+    setProductToDelete(null);
+    setDeleteLoading(false);
   };
 
   
@@ -807,9 +874,7 @@ Highlight:
             {filteredProduk.length === 0 ? (
               <div className="text-center py-12">
                 <div className="mx-auto h-24 w-24 text-gray-400 mb-4">
-                  <svg className="h-full w-full" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2M4 13h2m13-8V4a1 1 0 00-1-1H7a1 1 0 00-1 1v1m8 0V4a1 1 0 00-1-1H9a1 1 0 00-1 1v1" />
-                  </svg>
+                  <PlusIcon className="h-full w-full" />
                 </div>
                 <h3 className="text-lg font-medium text-gray-900 mb-2">Belum ada produk</h3>
                 <p className="text-gray-500 mb-6">Mulai jual akun game Anda sekarang!</p>
@@ -903,41 +968,36 @@ Highlight:
                         <PhotoIcon className="h-10 w-10 text-gray-300 mb-2" />
                         <span className="text-xs text-gray-400">Tidak ada gambar</span>
                       </div>
-                      <div className="absolute top-1.5 left-1.5">
-                        <span className="bg-blue-600 text-white text-xs px-1.5 py-0.5 rounded text-[10px]">
-                          {item.kodeProduk}
-                        </span>
-                      </div>
                       {/* Status Badge */}
                       <div className="absolute top-1.5 right-1.5">
                         {(() => {
                           if (item.statusProduk === 'TERJUAL') {
                             return (
-                              <span className="bg-red-100 text-red-800 text-xs px-1.5 py-0.5 rounded-full font-medium text-[10px]">
+                              <span className="bg-red-100 text-red-800 text-xs px-1.5 py-0.5 rounded font-medium text-[10px]">
                                 Terjual
                               </span>
                             );
                           } else if (item.statusProduk === 'AKTIF') {
                             return (
-                              <span className="bg-green-100 text-green-800 text-xs px-1.5 py-0.5 rounded-full font-medium text-[10px]">
+                              <span className="bg-green-100 text-green-800 text-xs px-1.5 py-0.5 rounded font-medium text-[10px]">
                                 Aktif
                               </span>
                             );
                           } else if (item.statusProduk === 'PENDING') {
                             return (
-                              <span className="bg-yellow-100 text-yellow-800 text-xs px-1.5 py-0.5 rounded-full font-medium text-[10px]">
+                              <span className="bg-yellow-100 text-yellow-800 text-xs px-1.5 py-0.5 rounded font-medium text-[10px]">
                                 Pending
                               </span>
                             );
                           } else if (item.statusProduk === 'DITOLAK') {
                             return (
-                              <span className="bg-red-100 text-red-800 text-xs px-1.5 py-0.5 rounded-full font-medium text-[10px]">
+                              <span className="bg-red-100 text-red-800 text-xs px-1.5 py-0.5 rounded font-medium text-[10px]">
                                 Ditolak
                               </span>
                             );
                           } else {
                             return (
-                              <span className="bg-gray-100 text-gray-800 text-xs px-1.5 py-0.5 rounded-full font-medium text-[10px]">
+                              <span className="bg-gray-100 text-gray-800 text-xs px-1.5 py-0.5 rounded font-medium text-[10px]">
                                 Unknown
                               </span>
                             );
@@ -947,7 +1007,6 @@ Highlight:
                     </div>
                     <div className="p-3">
                       <div className="flex items-center text-xs text-gray-500 mb-1">
-                        <DevicePhoneMobileIcon className="h-3 w-3 mr-1" />
                         <span>{item.namaGame}</span>
                       </div>
                       <LineClamp lines={2} className="font-semibold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors text-sm">
@@ -973,59 +1032,52 @@ Highlight:
                       </div>
                       
                       {/* Actions - Khusus untuk halaman Produk Saya */}
-                      <div className="space-y-2">
-                        <div className="flex space-x-1">
-                          <button
-                            onClick={() => handleDetailClick(item)}
-                            className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center justify-center"
-                          >
-                            <EyeIcon className="h-4 w-4 mr-2" />
-                            Detail
-                          </button>
-                          <button
-                            onClick={() => handleEdit(item.id)}
-                            className="flex-1 inline-flex items-center justify-center px-2 py-1.5 border border-gray-300 text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 transition-colors"
-                          >
-                            <PencilIcon className="h-3 w-3 mr-1" />
-                            Edit
-                          </button>
-                        </div>
-                        
-                        {/* Action Buttons */}
-                        {(() => {
-                          if (item.statusProduk === 'TERJUAL') {
-                            return (
-                              <div className="text-center py-1.5 bg-gray-50 rounded text-xs text-gray-600 font-medium">
-                                Produk sudah terjual
-                              </div>
-                            );
-                          } else if (item.statusProduk === 'PENDING') {
-                            return (
-                              <div className="text-center py-1.5 bg-yellow-50 rounded text-xs text-yellow-600 font-medium">
-                                Menunggu persetujuan admin
-                              </div>
-                            );
-                          } else if (item.statusProduk === 'DITOLAK') {
-                            return (
-                              <div className="text-center py-1.5 bg-red-50 rounded text-xs text-red-600 font-medium">
-                                Ditolak oleh admin
-                              </div>
-                            );
-                          } else {
-                            return (
-                              <div className="flex space-x-1">
-                                <button
-                                  onClick={() => handleDelete(item.id)}
-                                  className="w-full px-2 py-1.5 text-xs font-medium rounded text-red-700 bg-red-100 hover:bg-red-200 transition-colors flex items-center justify-center"
-                                >
-                                  <TrashIcon className="h-3 w-3 mr-1" />
-                                  Hapus
-                                </button>
-                              </div>
-                            );
-                          }
-                        })()}
-                      </div>
+                      {/* Action Buttons */}
+                      {(() => {
+                        if (item.statusProduk === 'TERJUAL') {
+                          return (
+                            <div className="text-center py-1.5 bg-gray-50 rounded text-xs text-gray-600 font-medium">
+                              Produk sudah terjual
+                            </div>
+                          );
+                        } else if (item.statusProduk === 'PENDING') {
+                          return (
+                            <div className="text-center py-1.5 bg-yellow-50 rounded text-xs text-yellow-600 font-medium">
+                              Menunggu persetujuan admin
+                            </div>
+                          );
+                        } else if (item.statusProduk === 'DITOLAK') {
+                          return (
+                            <div className="text-center py-1.5 bg-red-50 rounded text-xs text-red-600 font-medium">
+                              Ditolak oleh admin
+                            </div>
+                          );
+                        } else {
+                          return (
+                            <div className="grid grid-cols-5 gap-1">
+                              <button
+                                onClick={() => handleDetailClick(item)}
+                                className="col-span-3 bg-blue-600 text-white py-1.5 px-2 rounded text-xs font-medium hover:bg-blue-700 transition-colors flex items-center justify-center"
+                              >
+                                <EyeIcon className="h-3 w-3 mr-1" />
+                                Detail
+                              </button>
+                              <button
+                                onClick={() => handleEdit(item.id)}
+                                className="col-span-1 border border-gray-300 text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 transition-colors flex items-center justify-center py-1.5 px-1"
+                              >
+                                <PencilIcon className="h-3 w-3" />
+                              </button>
+                              <button
+                                onClick={() => handleDelete(item.id)}
+                                className="col-span-1 text-xs font-medium rounded text-red-700 bg-red-100 hover:bg-red-200 transition-colors flex items-center justify-center py-1.5 px-1"
+                              >
+                                <TrashIcon className="h-3 w-3" />
+                              </button>
+                            </div>
+                          );
+                        }
+                      })()}
                     </div>
                   </div>
                 ))}
@@ -1056,9 +1108,9 @@ Highlight:
 
               <form onSubmit={handleAddProduct} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Form */}
-                <div className="lg:col-span-2 space-y-6">
+                <div className="lg:col-span-2">
                   {/* Judul Produk */}
-                  <div>
+                  <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Judul Produk *
                     </label>
@@ -1081,40 +1133,33 @@ Highlight:
                   </div>
 
                   {/* Nama Game */}
-                  <div>
+                  <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Nama Game *
                     </label>
-                    <input
-                      type="text"
+                    <select
                       name="namaGame"
                       value={formData.namaGame}
                       onChange={handleInputChange}
-                      placeholder="Contoh: Mobile Legends"
                       className={`w-full px-3 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500 ${
                         errors.namaGame ? 'border-red-300' : 'border-gray-300'
                       }`}
-                      list="game-suggestions"
-                    />
-                    <datalist id="game-suggestions">
-                      {gamePopuler.map((game, index) => (
-                        <option key={`game-option-${index}-${game.namaGame}`} value={game.namaGame} />
-                      ))}
-                      <option value="Mobile Legends" />
-                      <option value="PUBG Mobile" />
-                      <option value="Free Fire" />
-                      <option value="Genshin Impact" />
-                      <option value="Call of Duty Mobile" />
-                    </datalist>
+                    >
+                      <option value="">Pilih Game</option>
+                      <option value="Mobile Legends">Mobile Legends</option>
+                      <option value="Free Fire">Free Fire</option>
+                      <option value="PUBG Mobile">PUBG Mobile</option>
+                      <option value="Genshin Impact">Genshin Impact</option>
+                    </select>
                     {errors.namaGame && (
                       <p className="mt-1 text-sm text-red-600">{errors.namaGame}</p>
                     )}
                   </div>
 
                   {/* Harga ETH */}
-                  <div>
+                  <div className="mb-6">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Harga dalam ETH (Sepolia) *
+                      Harga dalam ETH *
                     </label>
                     <div className="space-y-3">
                       {/* Input ETH */}
@@ -1160,7 +1205,7 @@ Highlight:
                       )}
                       {/* Suggested Prices */}
                       {priceInfo.suggestions.length > 0 && (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        <div className="grid grid-cols-3 gap-1">
                           {priceInfo.suggestions.map((suggestion, index) => (
                             <button
                               key={index}
@@ -1169,11 +1214,10 @@ Highlight:
                                 setFormData(prev => ({ ...prev, hargaEth: suggestion.eth }));
                                 handleEthToIdrConversion(suggestion.eth);
                               }}
-                              className="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded border text-center transition-colors"
+                              className="text-xs bg-gray-100 hover:bg-gray-200 px-1.5 py-1 rounded border text-center transition-colors"
                             >
-                              <div className="font-medium">{suggestion.eth} ETH</div>
-                              <div className="text-gray-600">{suggestion.idrFormatted}</div>
-                              <div className="text-gray-500">({suggestion.label})</div>
+                              <div className="font-medium text-xs">{suggestion.eth} ETH</div>
+                              <div className="text-gray-600 text-xs">{suggestion.idrFormatted}</div>
                             </button>
                           ))}
                         </div>
@@ -1191,7 +1235,7 @@ Highlight:
                   </div>
 
                   {/* Upload Gambar */}
-                  <div>
+                  <div className="mb-2">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Screenshot Akun *
                     </label>
@@ -1218,7 +1262,7 @@ Highlight:
                   </div>
 
                   {/* Deskripsi */}
-                  <div>
+                  <div className="mb-6">
                     <div className="flex justify-between items-center mb-2">
                       <label className="block text-sm font-medium text-gray-700">
                         Deskripsi Detail *
@@ -1229,7 +1273,7 @@ Highlight:
                           onClick={() => applyTemplate(formData.namaGame)}
                           className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200 transition-colors"
                         >
-                          📋 Gunakan Template {formData.namaGame}
+                          Gunakan Template {formData.namaGame}
                         </button>
                       )}
                     </div>
@@ -1272,83 +1316,66 @@ Highlight:
 
                 {/* Sidebar Preview */}
                 <div className="lg:col-span-1">
-                  <div className="bg-gray-50 rounded-lg p-4 sticky top-4">
-                    <h4 className="text-lg font-semibold text-gray-900 mb-4">Preview Produk</h4>
-                    <div className="border rounded-lg p-4 bg-white">
+                  <div className="bg-gray-50 rounded-lg p-2 sticky top-4">
+                    <h4 className="text-sm font-semibold text-gray-900 mb-2">Preview Produk</h4>
+                    <div className="border rounded-lg p-2 bg-white">
                       {/* Preview Image */}
-                      <div className="w-full h-32 bg-gray-200 rounded-md mb-3 flex items-center justify-center">
+                      <div className="w-full h-24 bg-gray-200 rounded-md mb-2 flex items-center justify-center">
                         {formData.gambar && formData.gambar.length > 0 ? (
-                          <img 
-                            src={formData.gambar[0]} 
-                            alt="Preview" 
+                          <img
+                            src={formData.gambar[0]}
+                            alt="Preview"
                             className="w-full h-full object-cover rounded-md"
                           />
                         ) : (
-                          <PhotoIcon className="h-8 w-8 text-gray-400" />
+                          <PhotoIcon className="h-6 w-6 text-gray-400" />
                         )}
                       </div>
                       {/* Show image count if multiple images */}
                       {formData.gambar && formData.gambar.length > 1 && (
-                        <div className="text-xs text-gray-500 text-center mb-2">
+                        <div className="text-xs text-gray-500 text-center mb-1">
                           +{formData.gambar.length - 1} gambar lainnya
                         </div>
                       )}
                       {/* Preview Content */}
-                      <div className="space-y-2">
-                        <div className="text-sm font-medium text-gray-900">
-                          {formData.judulProduk || 'Judul Produk Anda'}
+                      <div className="space-y-1">
+                        <div className="text-xs font-medium text-gray-900 leading-tight line-clamp-2">
+                          {formData.judulProduk || 'Jual Akun Genshin Sultan'}
                         </div>
                         <div className="text-xs text-gray-500">
-                          {formData.namaGame || 'Nama Game'}
+                          {formData.namaGame || 'Genshin Impact'}
                         </div>
                         <div className="flex justify-between items-center">
                           <div>
-                            <div className="text-lg font-bold text-blue-600">
+                            <div className="text-sm font-bold text-blue-600">
                               {formData.hargaEth ?
                                 (currencyMode === 'ETH' ?
                                   `${formData.hargaEth} ETH` :
                                   formatRupiah(parseFloat(formData.hargaEth))
                                 ) :
-                                (currencyMode === 'ETH' ? '0.000 ETH' : formatRupiah(0))
+                                (currencyMode === 'ETH' ? '0.002 ETH' : formatRupiah(135883))
                               }
                             </div>
-                            {formData.hargaEth && currencyMode === 'ETH' && (
-                              <div className="text-xs text-gray-500">
-                                ≈ {formatIdrPrice(convertEthToIdr(parseFloat(formData.hargaEth)))}
-                              </div>
-                            )}
-                            {formData.hargaEth && currencyMode === 'IDR' && (
-                              <div className="text-xs text-gray-500">
-                                ≈ {formatEthPrice(convertIdrToEth(parseFloat(formData.hargaEth)))}
-                              </div>
-                            )}
+                            <div className="text-xs text-gray-500">
+                              ≈ Rp 135.883
+                            </div>
                           </div>
                         </div>
-                        {formData.deskripsi && (
-                          <div className="text-xs text-gray-600 mt-2 line-clamp-3">
-                            {formData.deskripsi.substring(0, 100)}...
-                          </div>
-                        )}
+                        <div className="text-xs text-gray-600 mt-1">
+                          Detail Akun Genshin Impact: Adventure Rank: [AR level] World Level: [WL level] 5-Star...
+                        </div>
                       </div>
                     </div>
                     {/* Completion Progress */}
-                    <div className="mt-4">
-                      <div className="flex justify-between text-sm mb-2">
+                    <div className="mt-2">
+                      <div className="flex justify-between text-xs mb-1">
                         <span className="text-gray-600">Kelengkapan</span>
-                        <span className="text-gray-900 font-medium">
-                          {Math.round(
-                            [formData.judulProduk, formData.namaGame, formData.hargaEth, formData.deskripsi, formData.gambar]
-                              .filter(Boolean).length / 5 * 100
-                          )}%
-                        </span>
+                        <span className="text-gray-900 font-medium">{calculateCompletionPercentage()}%</span>
                       </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div 
-                          className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                          style={{
-                            width: `${[formData.judulProduk, formData.namaGame, formData.hargaEth, formData.deskripsi, formData.gambar]
-                              .filter(Boolean).length / 5 * 100}%`
-                          }}
+                      <div className="w-full bg-gray-200 rounded-full h-1">
+                        <div
+                          className="bg-blue-600 h-1 rounded-full transition-all duration-300"
+                          style={{ width: `${calculateCompletionPercentage()}%` }}
                         ></div>
                       </div>
                     </div>
@@ -1375,10 +1402,7 @@ Highlight:
                         <span>Menyimpan...</span>
                       </>
                     ) : (
-                      <>
-                        <DevicePhoneMobileIcon className="h-4 w-4" />
-                        <span>Tambah Produk</span>
-                      </>
+                      <span>Tambah Produk</span>
                     )}
                   </button>
                 </div>
@@ -1399,15 +1423,9 @@ Highlight:
                 </h3>
                 <button
                   onClick={() => {
-                    if (hasUnsavedEditImages) {
-                      if (window.confirm('Anda memiliki perubahan gambar yang belum disimpan. Yakin ingin meninggalkan halaman?')) {
-                        setShowEditModal(false);
-                        setEditProduk(null);
-                      }
-                    } else {
-                      setShowEditModal(false);
-                      setEditProduk(null);
-                    }
+                    setShowEditModal(false);
+                    setEditProduk(null);
+                    setHasUnsavedEditImages(false);
                   }}
                   className="text-gray-400 hover:text-gray-600"
                 >
@@ -1514,22 +1532,6 @@ Highlight:
                       }}
                       className="w-full"
                     />
-                    {hasUnsavedEditImages && (
-                      <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-                        <div className="flex">
-                          <div className="flex-shrink-0">
-                            <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                            </svg>
-                          </div>
-                          <div className="ml-3">
-                            <p className="text-sm text-yellow-800">
-                              <strong>Perhatian:</strong> Anda telah mengubah gambar produk. Klik tombol "Perbarui Produk" di bawah untuk menyimpan perubahan.
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
                   </div>
 
                   {/* Deskripsi */}
@@ -1661,15 +1663,9 @@ Highlight:
                   <button
                     type="button"
                     onClick={() => {
-                      if (hasUnsavedEditImages) {
-                        if (window.confirm('Anda memiliki perubahan gambar yang belum disimpan. Yakin ingin membatalkan?')) {
-                          setShowEditModal(false);
-                          setEditProduk(null);
-                        }
-                      } else {
-                        setShowEditModal(false);
-                        setEditProduk(null);
-                      }
+                      setShowEditModal(false);
+                      setEditProduk(null);
+                      setHasUnsavedEditImages(false);
                     }}
                     className="px-6 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
                   >
@@ -1686,10 +1682,7 @@ Highlight:
                         <span>Menyimpan...</span>
                       </>
                     ) : (
-                      <>
-                        <DevicePhoneMobileIcon className="h-4 w-4" />
-                        <span>Perbarui Produk</span>
-                      </>
+                      <span>Perbarui Produk</span>
                     )}
                   </button>
                 </div>
@@ -1972,12 +1965,6 @@ Highlight:
                           <div className="space-y-3">
                             <div className="grid grid-cols-2 gap-3">
                               <button
-                                onClick={() => setShowDetailModal(false)}
-                                className="bg-gray-200 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-300 transition-colors text-sm"
-                              >
-                                BATAL
-                              </button>
-                              <button
                                 onClick={() => {
                                   setShowDetailModal(false);
                                   handleEdit(selectedProduk.id);
@@ -1986,8 +1973,6 @@ Highlight:
                               >
                                 EDIT
                               </button>
-                            </div>
-                            <div className="grid grid-cols-1 gap-3">
                               <button
                                 onClick={() => {
                                   setShowDetailModal(false);
@@ -2126,6 +2111,19 @@ Highlight:
           </div>
         </div>
       )}
+
+      {/* Confirmation Modal untuk Delete */}
+      <ConfirmationModal
+        isOpen={showDeleteConfirm}
+        onClose={cancelDelete}
+        onConfirm={confirmDelete}
+        title="Hapus Produk"
+        message="Yakin ingin menghapus produk ini? Tindakan ini tidak dapat dibatalkan."
+        confirmText="Hapus"
+        cancelText="Batal"
+        type="danger"
+        loading={deleteLoading}
+      />
     </div>
   );
 };

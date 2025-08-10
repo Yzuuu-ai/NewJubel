@@ -28,8 +28,7 @@ import {
   DocumentTextIcon,
   PaperAirplaneIcon,
   ShieldCheckIcon,
-  UserIcon,
-  BuildingStorefrontIcon
+  UserIcon
 } from '@heroicons/react/24/outline';
 
 // Simple Timer Component
@@ -683,7 +682,7 @@ const Dashboard = () => {
                   }`}
                 >
                   <div className="flex items-center space-x-2">
-                    <BuildingStorefrontIcon className="h-5 w-5" />
+                    <BanknotesIcon className="h-5 w-5" />
                     <span>Penjualan Saya</span>
                     <span className={`inline-flex items-center justify-center px-2 py-1 text-xs font-bold rounded-full ${
                       activeTab === 'penjualan' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-600'
@@ -741,11 +740,11 @@ const Dashboard = () => {
             {/* Transaction Content */}
             {currentTransaksi.length === 0 ? (
               <div className="text-center py-12">
-                <div className="mx-auto h-24 w-24 text-gray-400 mb-4">
+                <div className="mx-auto h-16 w-16 text-gray-400 mb-4">
                   {activeTab === 'pembelian' ? (
                     <ShoppingBagIcon className="h-full w-full" />
                   ) : (
-                    <BuildingStorefrontIcon className="h-full w-full" />
+                    <BanknotesIcon className="h-full w-full" />
                   )}
                 </div>
                 <h3 className="text-lg font-medium text-gray-900 mb-2">
